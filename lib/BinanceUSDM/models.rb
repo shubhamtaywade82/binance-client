@@ -94,7 +94,7 @@ module BinanceUSDM
       def margin_ratio
         return '0' if total_margin_balance.to_f.zero?
 
-        ((total_position_initial_margin.to_f / total_margin_balance.to_f) * 100).round(2).to_s
+        ((total_position_initial_margin.to_f / total_margin_balance) * 100).round(2).to_s
       end
     end
 
