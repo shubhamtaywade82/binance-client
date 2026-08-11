@@ -50,34 +50,35 @@ module BinanceUSDM
   end
 
   # Raised when the API returns an error response.
+  # Base class for all specific API errors (AuthenticationError, ValidationError, etc.).
   class ApiError < BinanceError; end
 
   # Raised when authentication fails (invalid API key, signature, etc.)
-  class AuthenticationError < BinanceError; end
+  class AuthenticationError < ApiError; end
 
   # Raised when authorization fails (insufficient permissions)
-  class AuthorizationError < BinanceError; end
+  class AuthorizationError < ApiError; end
 
   # Raised when a request is invalid (bad parameters, missing fields)
-  class ValidationError < BinanceError; end
+  class ValidationError < ApiError; end
 
   # Raised when rate limit is exceeded.
-  class RateLimitError < BinanceError; end
+  class RateLimitError < ApiError; end
 
   # Raised when order-related errors occur.
-  class OrderError < BinanceError; end
+  class OrderError < ApiError; end
 
   # Raised when position-related errors occur.
-  class PositionError < BinanceError; end
+  class PositionError < ApiError; end
 
   # Raised when timestamp is outside recvWindow.
-  class TimestampError < BinanceError; end
+  class TimestampError < ApiError; end
 
   # Raised when account has insufficient balance.
-  class InsufficientBalanceError < BinanceError; end
+  class InsufficientBalanceError < ApiError; end
 
   # Raised when symbol is invalid or not found.
-  class InvalidSymbolError < BinanceError; end
+  class InvalidSymbolError < ApiError; end
 
   # Raised when network connection fails.
   class NetworkError < Error; end
@@ -89,7 +90,7 @@ module BinanceUSDM
   class TimeoutError < NetworkError; end
 
   # Raised when server returns 5xx errors.
-  class ServerError < BinanceError; end
+  class ServerError < ApiError; end
 
   require_relative 'errors/error_code_map'
 
