@@ -111,11 +111,11 @@ module Binance
     end
 
     # Lazy initialization for USD-M Futures module
-    # @return [BinanceUSDM::API]
+    # @return [Binance::USDM::API]
     def um_futures
       @um_futures ||= begin
         require_relative 'binance_usdm'
-        BinanceUSDM::API.new(
+        Binance::USDM::API.new(
           api_key: @api_key,
           secret_key: @secret_key,
           testnet: @testnet,
@@ -147,7 +147,7 @@ module Binance
     def ws
       raise NotImplementedError,
             'Unified WebSocket manager is planned for a future release. ' \
-            'Use BinanceUSDM::WebSocket::MarketClient for futures streaming.'
+            'Use Binance::USDM::WebSocket::MarketClient for futures streaming.'
     end
 
     # Synchronize time with Binance server

@@ -64,9 +64,9 @@ module Binance
   class TimeoutError < NetworkError; end
   class ServerError < BinanceError; end
 
-  # Mapping of Binance error codes to error classes (from BinanceUSDM)
+  # Mapping of Binance error codes to error classes (from Binance::USDM)
   def self.error_map
-    defined?(BinanceUSDM::ERROR_CODE_MAP) ? BinanceUSDM::ERROR_CODE_MAP : {}
+    defined?(Binance::USDM::ERROR_CODE_MAP) ? Binance::USDM::ERROR_CODE_MAP : {}
   end
 
   # Get error class for a given Binance error code

@@ -1,11 +1,11 @@
-# BinanceUSDM - Ruby SDK for Binance USD-M Futures
+# Binance::USDM - Ruby SDK for Binance USD-M Futures
 
 [![CI](https://github.com/shubhamtaywade82/binance_usdm/actions/workflows/ci.yml/badge.svg)](https://github.com/shubhamtaywade82/binance_usdm/actions/workflows/ci.yml)
 [![Gem Version](https://badge.fury.io/rb/binance_usdm.svg)](https://rubygems.org/gems/binance_usdm)
 [![Ruby Style Guide](https://img.shields.io/badge/code_style-rubocop-brightgreen.svg)](https://github.com/rubocop/rubocop)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
 
-**BinanceUSDM** is a production-grade Ruby SDK for the Binance USD-M Futures API. Build algorithmic trading systems, market data pipelines, and portfolio management tools with clean Ruby abstractions, typed models, and resilient WebSocket streaming.
+**Binance::USDM** is a production-grade Ruby SDK for the Binance USD-M Futures API. Build algorithmic trading systems, market data pipelines, and portfolio management tools with clean Ruby abstractions, typed models, and resilient WebSocket streaming.
 
 ## Features
 
@@ -36,14 +36,14 @@ gem install binance_usdm
 require 'binance_usdm'
 
 # Configure with your credentials
-BinanceUSDM.configure do |config|
+Binance::USDM.configure do |config|
   config.api_key = ENV['BINANCE_API_KEY']
   config.secret_key = ENV['BINANCE_SECRET_KEY']
   config.testnet = true  # Use testnet for testing
 end
 
 # Create client
-client = BinanceUSDM.client
+client = Binance::USDM.client
 
 # Get account info
 account = client.account_info
@@ -114,7 +114,7 @@ klines = client.klines(symbol: 'BTCUSDT', interval: '1h', limit: 100)
 ### WebSocket Market Data
 
 ```ruby
-ws = BinanceUSDM::WebSocket::MarketClient.new(testnet: true)
+ws = Binance::USDM::WebSocket::MarketClient.new(testnet: true)
 
 # Subscribe to ticker updates
 ws.subscribe_ticker('BTCUSDT', 'ETHUSDT')
@@ -132,13 +132,13 @@ ws.connect
 
 ```ruby
 begin
-  client = BinanceUSDM.client
+  client = Binance::USDM.client
   order = client.place_order(...)
-rescue BinanceUSDM::AuthenticationError => e
+rescue Binance::USDM::AuthenticationError => e
   puts "Invalid API credentials: #{e.message}"
-rescue BinanceUSDM::RateLimitError => e
+rescue Binance::USDM::RateLimitError => e
   puts "Rate limit exceeded: #{e.message}"
-rescue BinanceUSDM::ApiError => e
+rescue Binance::USDM::ApiError => e
   puts "API error #{e.code}: #{e.message}"
 end
 ```
@@ -148,7 +148,7 @@ end
 Use Binance testnet for safe testing:
 
 ```ruby
-BinanceUSDM.configure do |config|
+Binance::USDM.configure do |config|
   config.api_key = 'your_testnet_api_key'
   config.secret_key = 'your_testnet_secret_key'
   config.testnet = true

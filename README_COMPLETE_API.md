@@ -307,7 +307,7 @@ The old API still works for backward compatibility:
 ```ruby
 # Old way (still works)
 require 'binance_usdm'
-client = BinanceUSDM.client(api_key: "...", secret_key: "...")
+client = Binance::USDM.client(api_key: "...", secret_key: "...")
 client.place_order(...)
 
 # New way (recommended)

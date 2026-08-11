@@ -10,7 +10,7 @@ RSpec.describe 'Binance USD-M testnet e2e' do
   let(:api_key) { ENV.fetch('BINANCE_TESTNET_API_KEY', nil) }
   let(:secret_key) { ENV.fetch('BINANCE_TESTNET_SECRET_KEY', nil) }
   let(:client) do
-    BinanceUSDM::Client.new(api_key: api_key || 'public', secret_key: secret_key || 'public', testnet: true)
+    Binance::USDM::Client.new(api_key: api_key || 'public', secret_key: secret_key || 'public', testnet: true)
   end
 
   before(:all) do
@@ -24,7 +24,7 @@ RSpec.describe 'Binance USD-M testnet e2e' do
   describe 'market data' do
     it 'fetches the 24h ticker' do
       ticker = client.market.ticker_24h(symbol: 'BTCUSDT')
-      expect(ticker).to be_a(BinanceUSDM::Models::Ticker)
+      expect(ticker).to be_a(Binance::USDM::Models::Ticker)
       expect(ticker.symbol).to eq('BTCUSDT')
       expect(ticker.last_price.to_f).to be_positive
     end
@@ -61,7 +61,7 @@ RSpec.describe 'Binance USD-M testnet e2e' do
 
     it 'maps an invalid symbol to an API error' do
       expect { client.market.depth(symbol: 'NOTREAL') }
-        .to raise_error(BinanceUSDM::ApiError, /Invalid symbol/i)
+        .to raise_error(Binance::USDM::ApiError, /Invalid symbol/i)
     end
   end
 
@@ -72,12 +72,12 @@ RSpec.describe 'Binance USD-M testnet e2e' do
 
     it 'fetches account info and balance' do
       account = client.account.info
-      expect(account).to be_a(BinanceUSDM::Models::Account)
+      expect(account).to be_a(Binance::USDM::Models::Account)
       expect(account.total_wallet_balance).to be_a(String)
 
       balances = client.account.balance
       expect(balances).to be_an(Array)
-      expect(balances.first).to be_a(BinanceUSDM::Models::Balance)
+      expect(balances.first).to be_a(Binance::USDM::Models::Balance)
     end
 
     it 'places, finds and cancels a limit order' do
@@ -86,7 +86,7 @@ RSpec.describe 'Binance USD-M testnet e2e' do
         symbol: 'BTCUSDT', side: 'BUY', type: 'LIMIT', quantity: '0.001',
         price: (price * 0.9).round.to_s, time_in_force: 'GTC'
       )
-      expect(order).to be_a(BinanceUSDM::Models::Order)
+      expect(order).to be_a(Binance::USDM::Models::Order)
       expect(order.active?).to be(true)
 
       found = client.order.find(symbol: 'BTCUSDT', order_id: order.order_id)

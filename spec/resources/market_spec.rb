@@ -2,11 +2,11 @@
 
 require 'spec_helper'
 
-RSpec.describe BinanceUSDM::Resources::Market do
+RSpec.describe Binance::USDM::Resources::Market do
   include_context 'with binance client'
 
-  let(:market) { BinanceUSDM::Resources::Market.new(client) }
-  let(:base_url) { BinanceUSDM::Constants::Urls::TESTNET_REST_API_BASE }
+  let(:market) { Binance::USDM::Resources::Market.new(client) }
+  let(:base_url) { Binance::USDM::Constants::Urls::TESTNET_REST_API_BASE }
 
   before do
     WebMock.disable_net_connect!(allow_localhost: true)
@@ -23,7 +23,7 @@ RSpec.describe BinanceUSDM::Resources::Market do
           )
 
         result = market.ticker_24h(symbol: 'BTCUSDT')
-        expect(result).to be_a(BinanceUSDM::Models::Ticker)
+        expect(result).to be_a(Binance::USDM::Models::Ticker)
         expect(result.symbol).to eq('BTCUSDT')
         expect(result.last_price).to eq('50000.00')
       end
@@ -40,7 +40,7 @@ RSpec.describe BinanceUSDM::Resources::Market do
 
         result = market.ticker_24h
         expect(result).to be_an(Array)
-        expect(result.first).to be_a(BinanceUSDM::Models::Ticker)
+        expect(result.first).to be_a(Binance::USDM::Models::Ticker)
       end
     end
   end
@@ -214,8 +214,8 @@ RSpec.describe BinanceUSDM::Resources::Market do
           headers: { 'Content-Type' => 'application/json' }
         )
 
-      BinanceUSDM::Resources::Market.using(client) do
-        price = BinanceUSDM::Resources::Market.price(symbol: 'BTCUSDT')
+      Binance::USDM::Resources::Market.using(client) do
+        price = Binance::USDM::Resources::Market.price(symbol: 'BTCUSDT')
         expect(price).to eq('50000.00')
       end
     end
