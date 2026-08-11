@@ -4,6 +4,11 @@ source 'https://rubygems.org'
 
 gemspec
 
+# faraday-net_http >= 3.1 pulls net-http/uri versions that cannot activate on Ruby 3.0
+gem 'faraday-net_http', '~> 3.0.0'
+# rubygems loads tsort at boot; Ruby 3.0 ships 0.1.0, newer versions fail activation
+gem 'tsort', '0.1.0'
+
 group :development, :test do
   gem 'debug', require: 'debug/prelude'
   gem 'rake', '~> 13.0'

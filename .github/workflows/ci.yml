@@ -30,7 +30,7 @@ jobs:
           bundler-cache: true
 
       - name: Run RuboCop
-        run: bundle exec rubocop --parallel
+        run: bundle exec rubocop lib spec binance_usdm.gemspec Rakefile --parallel
 
   audit:
     name: Dependency audit

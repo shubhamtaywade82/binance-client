@@ -14,6 +14,9 @@ RSpec::Core::RakeTask.new(:integration) do |task|
 end
 
 RuboCop::RakeTask.new(:lint) do |task|
+  # explicit paths keep rubocop from scanning vendor/bundle and tripping on
+  # vendored gems' own .rubocop.yml plugin declarations
+  task.patterns = ['lib', 'spec', 'binance_usdm.gemspec', 'Rakefile']
   task.options = ['--parallel']
 end
 
