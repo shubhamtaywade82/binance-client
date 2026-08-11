@@ -1,0 +1,52 @@
+# frozen_string_literal: true
+
+module BinanceUSDM
+  module Transport
+    # Endpoint specification defining API endpoint behavior.
+    class EndpointSpec
+      attr_reader :path, :method, :security, :encoding, :metadata
+
+      # Initialize endpoint specification
+      # @param path [String] API endpoint path
+      # @param method [Symbol] HTTP method
+      # @param security [Symbol] Security type (:trade, :user_data, :market, nil)
+      # @param encoding [Symbol] Parameter encoding (:query, :form, :json)
+      # @param weight [Integer] Request weight (default: 1)
+      # @param order_count_10s [Integer] Order count per 10 seconds (default: 0)
+      # @param order_count_1m [Integer] Order count per minute (default: 0)
+      # @param metadata [Hash] Additional metadata
+      def initialize(path:, method:, security: :market, encoding: :query,
+                     weight: 1, order_count_10s: 0, order_count_1m: 0, metadata: {})
+        @path = path
+        @method = method
+        @security = security
+        @encoding = encoding
+        @metadata = metadata.merge(
+          weight: weight,
+          order_count_10s: order_count_10s,
+          order_count_1m: order_count_1m
+        )
+      end
+
+      # Create a request from this spec
+      # @param params [Hash] Request parameters
+      # @return [Request]
+      def build_request(params = {})
+        Request.new(
+          method: method,
+          path: path,
+          params: params,
+          security: security,
+          encoding: encoding,
+          metadata: metadata
+        )
+      end
+
+      # Check if endpoint consumes order limits
+      # @return [Boolean]
+      def consumes_order_limits?
+        metadata[:order_count_10s] > 0 || metadata[:order_count_1m] > 0
+      end
+    end
+  end
+end

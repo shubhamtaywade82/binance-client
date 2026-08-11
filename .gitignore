@@ -1,37 +1,29 @@
-```
+```ruby
 # Dependencies
-vendor/bundle/
 .bundle/
+vendor/bundle/
 
 # Build artifacts
 *.gem
-pkg/
+*.rbc
+coverage/
+tmp/
 
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
 # Logs
 *.log
 
-# Coverage
-coverage/
-*.cov
-
-# Temporary files
-*.tmp
-*.temp
-.DS_Store
-Thumbs.db
-
-# IDE
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Tests
-.rspec
-spec/reports/
+# OS generated
+.DS_Store
+Thumbs.db
 ```
