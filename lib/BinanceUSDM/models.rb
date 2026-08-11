@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../core/base_model"
+require_relative "core/base_model"
 
 module BinanceUSDM
   module Models
@@ -52,27 +52,18 @@ module BinanceUSDM
       def active?
         %w[NEW PARTIALLY_FILLED].include?(status)
       end
+
+      def filled?
+        status == "FILLED"
+      end
     end
     
     # Position model representing a futures position.
     class Position < BaseModel
-      # @!attribute [r] symbol
-      #   @return [String] Trading symbol
-      # @!attribute [r] position_amt
-      #   @return [String] Position amount
-      # @!attribute [r] entry_price
-      #   @return [String] Entry price
-      # @!attribute [r] mark_price
-      #   @return [String] Mark price
-      # @!attribute [r] unrealized_profit
-      #   @return [String] Unrealized profit
-      # @!attribute [r] liquidation_price
-      #   @return [String] Liquidation price
-      # @!attribute [r] leverage
-      #   @return [Integer] Leverage
-      # @!attribute [r] position_side
-      #   @return [String] Position side (LONG/SHORT/BOTH)
-      
+      def leverage
+        @leverage&.to_i
+      end
+
       def long?
         position_side == "LONG" || (position_side == "BOTH" && position_amt.to_f > 0)
       end
@@ -92,22 +83,9 @@ module BinanceUSDM
     
     # Account model representing account information.
     class Account < BaseModel
-      # @!attribute [r] available_balance
-      #   @return [String] Available balance
-      # @!attribute [r] total_wallet_balance
-      #   @return [String] Total wallet balance
-      # @!attribute [r] total_unrealized_pnl
-      #   @return [String] Total unrealized PnL
-      # @!attribute [r] total_margin_balance
-      #   @return [String] Total margin balance
-      # @!attribute [r] total_position_initial_margin
-      #   @return [String] Total position initial margin
-      # @!attribute [r] total_open_order_initial_margin
-      #   @return [String] Total open order initial margin
-      # @!attribute [r] cross_wallet_balance
-      #   @return [String] Cross wallet balance
-      # @!attribute [r] max_withdraw_amount
-      #   @return [String] Max withdraw amount
+      def total_unrealized_pnl
+        @total_unrealized_pnl || @total_unrealized_profit || @totalUnrealizedProfit
+      end
       
       def equity
         (total_wallet_balance.to_f + total_unrealized_pnl.to_f).to_s

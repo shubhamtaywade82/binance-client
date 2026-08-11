@@ -8,27 +8,18 @@ module BinanceUSDM
   class BinanceError < Error
     attr_reader :code, :message, :http_status, :headers, :endpoint, :request_id, :retry_after
 
-    # Initialize Binance error
-    # @param code [Integer] Binance error code
-    # @param message [String] Error message
-    # @param http_status [Integer] HTTP status code
-    # @param headers [Hash] Response headers
-    # @param endpoint [String] API endpoint
-    # @param request_id [String] Request ID from headers
-    # @param retry_after [Integer] Retry-After header value
-    def initialize(code: nil, message:, http_status: nil, headers: nil, endpoint: nil, request_id: nil, retry_after: nil)
-      @code = code
-      @message = message
-      @http_status = http_status
-      @headers = (headers || {}).transform_keys(&:downcase)
-      @endpoint = endpoint
-      @request_id = request_id || @headers["x-mbx-request-id"]
-      @retry_after = retry_after || @headers["retry-after"]&.to_i
-      super(message)
+    def initialize(message = nil, code: nil, http_status: nil, headers: nil, endpoint: nil, request_id: nil, retry_after: nil, **kwargs)
+      msg = message.is_a?(String) ? message : (kwargs[:message] || "Binance API Error")
+      @code = code || (message.is_a?(Numeric) ? message : kwargs[:code])
+      @message = msg
+      @http_status = http_status || kwargs[:http_status]
+      @headers = (headers || kwargs[:headers] || {}).transform_keys(&:downcase)
+      @endpoint = endpoint || kwargs[:endpoint]
+      @request_id = request_id || kwargs[:request_id] || @headers["x-mbx-request-id"]
+      @retry_after = retry_after || kwargs[:retry_after] || @headers["retry-after"]&.to_i
+      super(msg)
     end
 
-    # Convert to hash for debugging
-    # @return [Hash] Error details
     def to_h
       {
         code: code,
@@ -237,4 +228,6 @@ module BinanceUSDM
       endpoint: endpoint
     )
   end
+
+  Errors = self
 end

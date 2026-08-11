@@ -3,23 +3,19 @@
 require "faraday"
 require "json"
 require "logger"
-require_relative "../transport/http"
-require_relative "../transport/request"
-require_relative "../transport/endpoint"
-require_relative "../authentication/clock"
-require_relative "../rate_limit/manager"
+require_relative "transport/http"
+require_relative "transport/request"
+require_relative "transport/endpoint"
+require_relative "authentication/clock"
+require_relative "rate_limit/manager"
 
 module BinanceUSDM
   # HTTP client for making API requests to Binance.
   class Client
-    attr_reader :api_key, :secret_key, :testnet, :logger, :clock, :rate_limiter
+    attr_reader :api_key, :secret_key, :testnet, :logger, :clock, :rate_limiter, :http,
+                :order, :account, :market, :algo_orders
+    attr_accessor :auto_sync_time
     
-    # Initialize the HTTP client
-    # @param api_key [String] Binance API key
-    # @param secret_key [String] Binance API secret
-    # @param testnet [Boolean] Use testnet (default: false)
-    # @param logger [Logger] Custom logger (optional)
-    # @param timeout [Integer] Request timeout in seconds (default: 30)
     def initialize(api_key:, secret_key:, testnet: false, logger: nil, timeout: 30)
       @api_key = api_key
       @secret_key = secret_key
@@ -27,34 +23,32 @@ module BinanceUSDM
       @logger = logger || default_logger
       @base_url = testnet ? Constants::Urls::TESTNET_REST_API_BASE : Constants::Urls::REST_API_BASE
       
-      # Initialize clock for time synchronization
       @clock = Authentication::Clock.new
       @auto_sync_time = true
-      
-      # Initialize rate limiter
       @rate_limiter = RateLimit::Manager.new
       
-      # Initialize HTTP transport
       @http = Transport::HTTP.new(
         base_url: @base_url,
         api_key: api_key,
         secret_key: secret_key,
         timeout: timeout,
-        logger: logger
+        logger: @logger
       )
+
+      @order = Resources::Order.new(self)
+      @account = Resources::Account.new(self)
+      @market = Resources::Market.new(self)
+      @algo_orders = Resources::AlgoOrder.new(self)
     end
     
-    # Enable/disable automatic time synchronization
-    attr_accessor :auto_sync_time
+    def connection
+      @http.connection
+    end
     
-    # Get server time offset
-    # @return [Integer] Time offset in milliseconds
     def time_offset
       clock.time_offset
     end
     
-    # Get last server time sync timestamp
-    # @return [Time, nil]
     def server_time
       clock.now
     end
@@ -170,6 +164,7 @@ module BinanceUSDM
     # @param encoding [Symbol] Parameter encoding
     # @return [Hash, Array] Parsed JSON response
     def request(method, endpoint, params, signed, security, encoding)
+      connection
       security ||= (signed ? :trade : :market)
       
       request_obj = Transport::Request.new(
@@ -180,7 +175,6 @@ module BinanceUSDM
         encoding: encoding
       )
       
-      # Auto-sync time if enabled
       if auto_sync_time && clock.sync_needed? && request_obj.signed?
         begin
           sync_time!
@@ -189,22 +183,17 @@ module BinanceUSDM
         end
       end
       
-      # Execute request
       response = @http.execute(request_obj, timestamp_provider: clock)
-      
-      # Update rate limiter from headers
       rate_limiter.update_from_headers(response.headers)
-      
-      # Handle error responses
       handle_response_body(response.body, response.status, response.headers, endpoint)
       
       response.body
     rescue Faraday::ConnectionFailed => e
       logger.error("Connection failed: #{e.message}")
-      raise Errors::ConnectionError, "Failed to connect to Binance API: #{e.message}"
+      raise ConnectionError, "Failed to connect to Binance API: #{e.message}"
     rescue Faraday::TimeoutError => e
       logger.error("Request timeout: #{e.message}")
-      raise Errors::TimeoutError, "Request timeout: #{e.message}"
+      raise TimeoutError, "Request timeout: #{e.message}"
     end
     
     # Handle response body and raise errors if needed
@@ -215,9 +204,10 @@ module BinanceUSDM
     def handle_response_body(body, status, headers, endpoint)
       return unless body.is_a?(Hash) && body["code"]
       
-      code = body["code"]
-      message = body["msg"] || "Unknown error"
+      code = body["code"].to_i
+      return if code == 200 || (status && status >= 200 && status < 300 && code > 0)
       
+      message = body["msg"] || "Unknown error"
       error = BinanceUSDM.create_error(
         code: code,
         message: message,

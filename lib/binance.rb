@@ -97,29 +97,11 @@ module Binance
       @ws = nil
     end
     
-    # Lazy initialization for Spot module
-    # @return [Binance::Spot::Client]
-    def spot
-      @spot ||= begin
-        require_relative "binance/spot/client"
-        Binance::Spot::Client.new(
-          api_key: @api_key,
-          secret_key: @secret_key,
-          testnet: @testnet,
-          recv_window: @recv_window,
-          logger: @logger
-        )
-      end
-    end
-    
     # Lazy initialization for USD-M Futures module
-    # @return [Binance::UMFutures::Client]
+    # @return [BinanceUSDM::API]
     def um_futures
       @um_futures ||= begin
-        # Reuse existing BinanceUSDM implementation
-        require_relative "../binance_usdm"
-        
-        # Wrap the existing API class
+        require_relative "binance_usdm"
         BinanceUSDM::API.new(
           api_key: @api_key,
           secret_key: @secret_key,
@@ -129,97 +111,39 @@ module Binance
       end
     end
     
-    # Lazy initialization for COIN-M Futures module
-    # @return [Binance::CMFutures::Client]
+    def spot
+      raise NotImplementedError, "Spot client is planned for a future release"
+    end
+    
     def cm_futures
-      @cm_futures ||= begin
-        require_relative "binance/cm_futures/client"
-        Binance::CMFutures::Client.new(
-          api_key: @api_key,
-          secret_key: @secret_key,
-          testnet: @testnet,
-          recv_window: @recv_window,
-          logger: @logger
-        )
-      end
+      raise NotImplementedError, "COIN-M Futures client is planned for a future release"
     end
     
-    # Lazy initialization for Options module
-    # @return [Binance::Options::Client]
     def options
-      @options ||= begin
-        require_relative "binance/options/client"
-        Binance::Options::Client.new(
-          api_key: @api_key,
-          secret_key: @secret_key,
-          testnet: @testnet,
-          recv_window: @recv_window,
-          logger: @logger
-        )
-      end
+      raise NotImplementedError, "Options client is planned for a future release"
     end
     
-    # Lazy initialization for Margin module
-    # @return [Binance::Margin::Client]
     def margin
-      @margin ||= begin
-        require_relative "binance/margin/client"
-        Binance::Margin::Client.new(
-          api_key: @api_key,
-          secret_key: @secret_key,
-          testnet: @testnet,
-          recv_window: @recv_window,
-          logger: @logger
-        )
-      end
+      raise NotImplementedError, "Margin client is planned for a future release"
     end
     
-    # Lazy initialization for Wallet/SAPI module
-    # @return [Binance::Wallet::Client]
     def wallet
-      @wallet ||= begin
-        require_relative "binance/wallet/client"
-        Binance::Wallet::Client.new(
-          api_key: @api_key,
-          secret_key: @secret_key,
-          testnet: @testnet,
-          recv_window: @recv_window,
-          logger: @logger
-        )
-      end
+      raise NotImplementedError, "Wallet client is planned for a future release"
     end
     
-    # Lazy initialization for WebSocket manager
-    # @return [Binance::WebSocket::Manager]
     def ws
-      @ws ||= begin
-        require_relative "binance/websocket/manager"
-        Binance::WebSocket::Manager.new(
-          testnet: @testnet,
-          logger: @logger
-        )
-      end
+      raise NotImplementedError, "Unified WebSocket manager is planned for a future release. Use BinanceUSDM::WebSocket::MarketClient for futures streaming."
     end
     
-    # Synchronize time with Binance server (all products)
+    # Synchronize time with Binance server
     # @return [Hash] Server times from each product
     def sync_time!
       results = {}
-      
-      # Sync Spot time
-      begin
-        results[:spot] = spot.sync_time!
-      rescue => e
-        @logger.warn("Failed to sync Spot time: #{e.message}")
-      end
-      
-      # Sync UM Futures time
       begin
         results[:um_futures] = um_futures.sync_time!
       rescue => e
         @logger.warn("Failed to sync UM Futures time: #{e.message}")
       end
-      
       results
     end
     

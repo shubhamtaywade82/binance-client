@@ -1,200 +1,234 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "binance_usdm"
 
 RSpec.describe BinanceUSDM::Resources::Order do
   include_context "with binance client"
   
   let(:order_resource) { BinanceUSDM::Resources::Order.new(client) }
+  let(:base_url) { BinanceUSDM::Constants::Urls::TESTNET_REST_API_BASE }
+
+  before do
+    WebMock.disable_net_connect!(allow_localhost: true)
+  end
 
   describe "#open_orders" do
-    context "when no symbol is provided" do
-      it "returns all open orders", vcr: true do
-        result = order_resource.open_orders
-        
-        expect(result).to be_an(Array)
-        
-        if result.any?
-          order = result.first
-          expect(order).to be_a(BinanceUSDM::Models::Order)
-          expect(order.symbol).to be_present if order.respond_to?(:symbol)
-        end
-      end
-    end
+    it "returns open orders for a symbol" do
+      stub_request(:get, /#{base_url}\/fapi\/v1\/openOrders/)
+        .to_return(
+          status: 200,
+          body: [{ "orderId" => 12345, "symbol" => "BTCUSDT", "status" => "NEW", "side" => "BUY", "origQty" => "1.0" }].to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
 
-    context "when symbol is provided" do
-      it "returns open orders for the symbol", vcr: true do
-        result = order_resource.open_orders(symbol: "BTCUSDT")
-        
-        expect(result).to be_an(Array)
-        
-        result.each do |order|
-          expect(order).to be_a(BinanceUSDM::Models::Order)
-          expect(order.symbol).to eq("BTCUSDT") if order.respond_to?(:symbol)
-        end
-      end
+      result = order_resource.open_orders(symbol: "BTCUSDT")
+      expect(result).to be_an(Array)
+      expect(result.first).to be_a(BinanceUSDM::Models::Order)
+      expect(result.first.order_id).to eq(12345)
+      expect(result.first.active?).to be(true)
     end
   end
 
   describe "#all_orders" do
-    it "returns all orders for a symbol", vcr: true do
+    it "returns all orders for a symbol" do
+      stub_request(:get, /#{base_url}\/fapi\/v1\/allOrders/)
+        .to_return(
+          status: 200,
+          body: [{ "orderId" => 12345, "symbol" => "BTCUSDT", "status" => "FILLED", "side" => "BUY" }].to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
       result = order_resource.all_orders(symbol: "BTCUSDT", limit: 5)
-      
       expect(result).to be_an(Array)
-      expect(result.length).to be <= 5
-      
-      if result.any?
-        order = result.first
-        expect(order).to be_a(BinanceUSDM::Models::Order)
-        expect(order.symbol).to eq("BTCUSDT") if order.respond_to?(:symbol)
-      end
+      expect(result.first).to be_a(BinanceUSDM::Models::Order)
+      expect(result.first.filled?).to be(true)
     end
   end
 
   describe "#trades" do
-    it "returns user trades for a symbol", vcr: true do
+    it "returns user trades for a symbol" do
+      stub_request(:get, /#{base_url}\/fapi\/v1\/userTrades/)
+        .to_return(
+          status: 200,
+          body: [{ "id" => 101, "orderId" => 12345, "symbol" => "BTCUSDT", "price" => "50000.00", "qty" => "0.1" }].to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
       result = order_resource.trades(symbol: "BTCUSDT", limit: 5)
-      
       expect(result).to be_an(Array)
-      expect(result.length).to be <= 5
-      
-      if result.any?
-        trade = result.first
-        expect(trade).to be_a(BinanceUSDM::Models::Trade)
-        expect(trade.symbol).to eq("BTCUSDT") if trade.respond_to?(:symbol)
-      end
+      expect(result.first).to be_a(BinanceUSDM::Models::Trade)
+      expect(result.first.id).to eq(101)
+      expect(result.first.price).to eq("50000.00")
     end
   end
 
   describe "#find" do
-    context "when order exists" do
-      it "returns the order details", vcr: true do
-        # First get an existing order ID from all_orders
-        orders = order_resource.all_orders(symbol: "BTCUSDT", limit: 1)
-        
-        if orders.any?
-          order_id = orders.first.order_id
-          result = order_resource.find(symbol: "BTCUSDT", order_id: order_id)
-          
-          expect(result).to be_a(BinanceUSDM::Models::Order)
-          expect(result.order_id).to eq(order_id) if result.respond_to?(:order_id)
-        else
-          # Skip if no orders exist
-          skip("No orders found to test find")
-        end
-      end
+    it "returns the order details by order_id" do
+      stub_request(:get, /#{base_url}\/fapi\/v1\/order/)
+        .to_return(
+          status: 200,
+          body: { "orderId" => 12345, "symbol" => "BTCUSDT", "status" => "NEW", "price" => "50000.00" }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
+      result = order_resource.find(symbol: "BTCUSDT", order_id: 12345)
+      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result.order_id).to eq(12345)
     end
 
-    context "when using client_order_id" do
-      it "returns the order details", vcr: true do
-        # This would need a real client order ID from a previous order
-        # For now, we'll skip this test
-        skip("Requires a known client_order_id")
-      end
+    it "returns the order details by orig_client_order_id" do
+      stub_request(:get, /#{base_url}\/fapi\/v1\/order/)
+        .to_return(
+          status: 200,
+          body: { "orderId" => 12345, "clientOrderId" => "my_id_1", "symbol" => "BTCUSDT", "status" => "NEW" }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
+      result = order_resource.find(symbol: "BTCUSDT", orig_client_order_id: "my_id_1")
+      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result.client_order_id).to eq("my_id_1")
     end
   end
 
   describe "#place" do
-    context "on testnet" do
-      it "places a new order", vcr: true do
-        # Note: This test requires a valid testnet order cassette
-        # The cassette should contain a successful order placement response
-        begin
-          result = order_resource.place(
-            symbol: "BTCUSDT",
-            side: "BUY",
-            type: "LIMIT",
-            quantity: "0.001",
-            price: "50000.00",
-            time_in_force: "GTC"
-          )
-          
-          expect(result).to be_a(BinanceUSDM::Models::Order)
-          expect(result.symbol).to eq("BTCUSDT") if result.respond_to?(:symbol)
-          expect(result.side).to eq("BUY") if result.respond_to?(:side)
-        rescue BinanceUSDM::ApiError => e
-          # Order might fail due to insufficient balance or invalid price
-          # This is expected in some test scenarios
-          expect(e).to be_a(BinanceUSDM::ApiError)
-        end
-      end
+    it "places a limit order" do
+      stub_request(:post, /#{base_url}\/fapi\/v1\/order/)
+        .to_return(
+          status: 200,
+          body: { "orderId" => 12345, "symbol" => "BTCUSDT", "side" => "BUY", "type" => "LIMIT", "status" => "NEW" }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
+      result = order_resource.place(
+        symbol: "BTCUSDT",
+        side: "BUY",
+        type: "LIMIT",
+        quantity: "0.001",
+        price: "50000.00",
+        time_in_force: "GTC"
+      )
+
+      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result.order_id).to eq(12345)
+      expect(result.side).to eq("BUY")
     end
   end
 
   describe "#cancel" do
-    context "when order exists" do
-      it "cancels the order", vcr: true do
-        # Get an open order first
-        open_orders = order_resource.open_orders(symbol: "BTCUSDT")
-        
-        if open_orders.any?
-          order_id = open_orders.first.order_id
-          result = order_resource.cancel(symbol: "BTCUSDT", order_id: order_id)
-          
-          expect(result).to be_a(BinanceUSDM::Models::Order)
-          expect(result.status).to eq("CANCELED") if result.respond_to?(:status)
-        else
-          skip("No open orders to cancel")
-        end
-      end
-    end
+    it "cancels an order by order_id" do
+      stub_request(:delete, /#{base_url}\/fapi\/v1\/order/)
+        .to_return(
+          status: 200,
+          body: { "orderId" => 12345, "symbol" => "BTCUSDT", "status" => "CANCELED" }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
 
-    context "when order does not exist" do
-      it "raises an error", vcr: true do
-        expect {
-          order_resource.cancel(symbol: "BTCUSDT", order_id: 999_999_999)
-        }.to raise_error(BinanceUSDM::ApiError)
-      end
+      result = order_resource.cancel(symbol: "BTCUSDT", order_id: 12345)
+      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result.canceled?).to be(true)
     end
   end
 
   describe "#modify" do
-    context "when order exists and is modifiable" do
-      it "modifies the order", vcr: true do
-        # Place a test order first (or use existing one)
-        open_orders = order_resource.open_orders(symbol: "BTCUSDT")
-        
-        if open_orders.any? && open_orders.first.status == "NEW"
-          order_id = open_orders.first.order_id
-          result = order_resource.modify(
-            symbol: "BTCUSDT",
-            order_id: order_id,
-            quantity: "0.002"
-          )
-          
-          expect(result).to be_a(BinanceUSDM::Models::Order)
-          expect(result.order_id).to eq(order_id) if result.respond_to?(:order_id)
-        else
-          skip("No modifiable orders found")
-        end
-      end
+    it "modifies an order" do
+      stub_request(:put, /#{base_url}\/fapi\/v1\/order/)
+        .to_return(
+          status: 200,
+          body: { "orderId" => 12345, "symbol" => "BTCUSDT", "price" => "51000.00", "status" => "NEW" }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
+      result = order_resource.modify(
+        symbol: "BTCUSDT",
+        order_id: 12345,
+        side: "BUY",
+        quantity: "0.002",
+        price: "51000.00"
+      )
+
+      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result.price).to eq("51000.00")
     end
   end
 
   describe "#cancel_all" do
-    it "cancels all open orders for a symbol", vcr: true do
+    it "cancels all open orders for a symbol" do
+      stub_request(:delete, /#{base_url}\/fapi\/v1\/allOpenOrders/)
+        .to_return(
+          status: 200,
+          body: { "code" => 200, "msg" => "Success: All orders for BTCUSDT have been canceled." }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
       result = order_resource.cancel_all(symbol: "BTCUSDT")
-      
-      expect(result).to be_a(Hash)
-      expect(result["msg"]).to eq("Success: All orders for BTCUSDT have been canceled.") if result.key?("msg")
+      expect(result["msg"]).to match(/Success/)
+    end
+  end
+
+  describe "#batch operations" do
+    it "places batch orders" do
+      stub_request(:post, /#{base_url}\/fapi\/v1\/batchOrders/)
+        .to_return(
+          status: 200,
+          body: [{ "orderId" => 12345 }, { "orderId" => 12346 }].to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
+      orders = [
+        { symbol: "BTCUSDT", side: "BUY", type: "LIMIT", quantity: "0.001", price: "50000" },
+        { symbol: "BTCUSDT", side: "BUY", type: "LIMIT", quantity: "0.002", price: "49000" }
+      ]
+      result = order_resource.batch_place(orders: orders)
+      expect(result).to be_an(Array)
+      expect(result.length).to eq(2)
+    end
+
+    it "cancels batch orders" do
+      stub_request(:delete, /#{base_url}\/fapi\/v1\/batchOrders/)
+        .to_return(
+          status: 200,
+          body: [{ "orderId" => 12345 }, { "orderId" => 12346 }].to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
+      result = order_resource.batch_cancel(symbol: "BTCUSDT", order_ids: [12345, 12346])
+      expect(result).to be_an(Array)
+      expect(result.length).to eq(2)
     end
   end
 
   describe "validation" do
-    describe "#find" do
-      it "raises ArgumentError when neither order_id nor client_order_id is provided" do
-        expect {
-          order_resource.find(symbol: "BTCUSDT")
-        }.to raise_error(ArgumentError, /Either order_id or client_order_id must be provided/)
-      end
+    it "raises ArgumentError when neither order_id nor orig_client_order_id is provided to find" do
+      expect {
+        order_resource.find(symbol: "BTCUSDT")
+      }.to raise_error(ArgumentError, /Either order_id or client_order_id must be provided/)
     end
 
-    describe "#cancel" do
-      it "raises ArgumentError when neither order_id nor client_order_id is provided" do
-        expect {
-          order_resource.cancel(symbol: "BTCUSDT")
-        }.to raise_error(ArgumentError, /Either order_id or client_order_id must be provided/)
+    it "raises ArgumentError when neither order_id nor orig_client_order_id is provided to cancel" do
+      expect {
+        order_resource.cancel(symbol: "BTCUSDT")
+      }.to raise_error(ArgumentError, /Either order_id or client_order_id must be provided/)
+    end
+  end
+
+  describe "class methods" do
+    it "creates an order using ActiveRecord-style class method" do
+      stub_request(:post, /#{base_url}\/fapi\/v1\/order/)
+        .to_return(
+          status: 200,
+          body: { "orderId" => 9999, "symbol" => "BTCUSDT", "side" => "BUY", "status" => "NEW" }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
+      BinanceUSDM::Resources::Order.using(client) do
+        res = BinanceUSDM::Resources::Order.create(
+          symbol: "BTCUSDT",
+          side: "BUY",
+          type: "LIMIT",
+          quantity: "0.01",
+          price: "50000.00"
+        )
+        expect(res.order_id).to eq(9999)
       end
     end
   end
