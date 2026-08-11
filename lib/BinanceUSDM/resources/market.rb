@@ -32,9 +32,11 @@ module BinanceUSDM
         
         # Get latest price (class method)
         # @example BinanceUSDM::Resources::Market.price("ETHUSDT")
-        def price(symbol = nil)
-          result = client.market.prices(symbol: symbol)
-          symbol ? result["price"] : result
+        # @example BinanceUSDM::Resources::Market.price(symbol: "ETHUSDT")
+        def price(symbol = nil, **kwargs)
+          sym = symbol || kwargs[:symbol]
+          result = client.market.prices(symbol: sym)
+          sym ? result["price"] : result
         end
         
         # Get current order book depth (class method)
@@ -261,7 +263,7 @@ module BinanceUSDM
       # @param symbol [String] Trading symbol
       # @return [Hash] Open interest
       def open_interest(symbol:)
-        get("/fapi/v2/openInterest", params: { symbol: symbol }, signed: false)
+        get("/fapi/v1/openInterest", params: { symbol: symbol }, signed: false)
       end
       
       # Get open interest statistics

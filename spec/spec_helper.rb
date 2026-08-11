@@ -1,4 +1,8 @@
-# frozen_string_literal: true
+require "binance_usdm"
+require "binance"
+require "webmock/rspec"
+require "vcr"
+require_relative "helpers/shared_contexts"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -18,8 +22,8 @@ RSpec.configure do |config|
       vcr_config.hook_into :webmock
       vcr_config.configure_rspec_metadata!
       
-      # Allow connections to localhost if needed for tests
-      vcr_config.allow_http_connections_when_no_cassette = false
+      # Allow WebMock stubs when no cassette is active
+      vcr_config.allow_http_connections_when_no_cassette = true
       
       # Filter out sensitive data
       vcr_config.filter_sensitive_data("<BINANCE_API_KEY>") { ENV.fetch("BINANCE_API_KEY", nil) }

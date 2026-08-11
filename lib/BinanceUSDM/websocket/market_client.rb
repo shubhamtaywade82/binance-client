@@ -84,7 +84,7 @@ module BinanceUSDM
       # @param contract_type [String] Contract type: PERPETUAL, CURRENT_QUARTER, NEXT_QUARTER
       # @param interval [String] Kline interval
       def subscribe_continuous_kline(pair:, contract_type: "PERPETUAL", interval: "1m")
-        stream = "#{pair.lowercase}_#{contract_type.downcase}@continuousKline_#{interval}"
+        stream = "#{pair.downcase}_#{contract_type.downcase}@continuousKline_#{interval}"
         subscribe([stream])
       end
       

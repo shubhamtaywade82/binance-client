@@ -58,7 +58,7 @@ module BinanceUSDM
         # Batch create orders
         # @example BinanceUSDM::Resources::Order.batch_create([{symbol: "ETHUSDT", ...}, {symbol: "BTCUSDT", ...}])
         def batch_create(orders_array, **kwargs)
-          raise NotImplementedError, "Batch order creation not yet implemented"
+          client.order.batch_place(orders: orders_array, **kwargs)
         end
         
         # Batch cancel orders
@@ -175,21 +175,22 @@ module BinanceUSDM
       # @param symbol [String] Trading symbol
       # @param order_id [Integer, nil] Order ID
       # @param client_order_id [String, nil] Client order ID (origClientOrderId)
+      # @param orig_client_order_id [String, nil] Alias for client_order_id
+      # @param side [String, nil] Order side
       # @param quantity [String, nil] New quantity
       # @param price [String, nil] New price
       # @param client_order_id_new [String, nil] New client order ID for the modified order
       # @param recv_window [Integer, nil] Receive window
       # @return [Models::Order] Modified order
-      def modify(symbol:, order_id: nil, client_order_id: nil, quantity: nil, price: nil,
-                 client_order_id_new: nil, recv_window: nil)
-        raise ArgumentError, "Either order_id or client_order_id must be provided" unless order_id || client_order_id
+      def modify(symbol:, order_id: nil, client_order_id: nil, orig_client_order_id: nil, side: nil,
+                 quantity: nil, price: nil, client_order_id_new: nil, recv_window: nil)
+        client_oid = orig_client_order_id || client_order_id
+        raise ArgumentError, "Either order_id or client_order_id must be provided" unless order_id || client_oid
         
-        params = {
-          symbol: symbol
-        }
-        
+        params = { symbol: symbol }
         params[:orderId] = order_id if order_id
-        params[:origClientOrderId] = client_order_id if client_order_id
+        params[:origClientOrderId] = client_oid if client_oid
+        params[:side] = side.to_s.upcase if side
         params[:quantity] = quantity if quantity
         params[:price] = price if price
         params[:newClientOrderId] = client_order_id_new if client_order_id_new
@@ -221,18 +222,20 @@ module BinanceUSDM
         get("/fapi/v1/orderModifyHistory", params: params)
       end
       
-      # Cancel an order
+      # Cancel an active order
       # @param symbol [String] Trading symbol
       # @param order_id [Integer, nil] Order ID
-      # @param client_order_id [String, nil] Client order ID (alternative to order_id)
+      # @param client_order_id [String, nil] Client order ID
+      # @param orig_client_order_id [String, nil] Alias for client_order_id
       # @param recv_window [Integer, nil] Receive window
       # @return [Models::Order] Canceled order
-      def cancel(symbol:, order_id: nil, client_order_id: nil, recv_window: nil)
-        raise ArgumentError, "Either order_id or client_order_id must be provided" unless order_id || client_order_id
+      def cancel(symbol:, order_id: nil, client_order_id: nil, orig_client_order_id: nil, recv_window: nil)
+        client_oid = orig_client_order_id || client_order_id
+        raise ArgumentError, "Either order_id or client_order_id must be provided" unless order_id || client_oid
         
         params = { symbol: symbol }
         params[:orderId] = order_id if order_id
-        params[:origClientOrderId] = client_order_id if client_order_id
+        params[:origClientOrderId] = client_oid if client_oid
         params[:recvWindow] = recv_window if recv_window
         
         response = delete("/fapi/v1/order", params: params)
@@ -283,14 +286,16 @@ module BinanceUSDM
       # @param symbol [String] Trading symbol
       # @param order_id [Integer, nil] Order ID
       # @param client_order_id [String, nil] Client order ID (alternative to order_id)
+      # @param orig_client_order_id [String, nil] Alias for client_order_id
       # @param recv_window [Integer, nil] Receive window
       # @return [Models::Order] Order details
-      def find(symbol:, order_id: nil, client_order_id: nil, recv_window: nil)
-        raise ArgumentError, "Either order_id or client_order_id must be provided" unless order_id || client_order_id
+      def find(symbol:, order_id: nil, client_order_id: nil, orig_client_order_id: nil, recv_window: nil)
+        client_oid = orig_client_order_id || client_order_id
+        raise ArgumentError, "Either order_id or client_order_id must be provided" unless order_id || client_oid
         
         params = { symbol: symbol }
         params[:orderId] = order_id if order_id
-        params[:origClientOrderId] = client_order_id if client_order_id
+        params[:origClientOrderId] = client_oid if client_oid
         params[:recvWindow] = recv_window if recv_window
         
         response = get("/fapi/v1/order", params: params)

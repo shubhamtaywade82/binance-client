@@ -204,6 +204,36 @@ module BinanceUSDM
       def commission_rate(symbol:)
         get("/fapi/v1/commissionRate", params: { symbol: symbol })
       end
+
+      # Get leverage brackets
+      # @param symbol [String, nil] Trading symbol (optional)
+      # @return [Array, Hash] Leverage bracket information
+      def leverage_brackets(symbol: nil)
+        params = symbol ? { symbol: symbol } : {}
+        get("/fapi/v1/leverageBracket", params: params)
+      end
+
+      # Create listenKey for user data stream
+      # @return [Hash] Hash containing listenKey
+      def create_listen_key
+        post("/fapi/v1/listenKey", signed: false)
+      end
+
+      # Keep-alive listenKey
+      # @param listen_key [String, nil] Listen key
+      # @return [Hash] Response
+      def keep_alive_listen_key(listen_key = nil)
+        params = listen_key ? { listenKey: listen_key } : {}
+        put("/fapi/v1/listenKey", params: params, signed: false)
+      end
+
+      # Close listenKey
+      # @param listen_key [String, nil] Listen key
+      # @return [Hash] Response
+      def close_listen_key(listen_key = nil)
+        params = listen_key ? { listenKey: listen_key } : {}
+        delete("/fapi/v1/listenKey", params: params, signed: false)
+      end
     end
   end
 end
