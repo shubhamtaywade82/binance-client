@@ -7,7 +7,66 @@ module BinanceUSDM
   module Resources
     # Order resource for managing futures orders.
     # Implements all Binance USDⓈ-M Futures order endpoints.
+    # Supports both instance methods (via client) and class methods (via default_client).
     class Order < BaseAPI
+      # Class methods for ORM/ActiveRecord-style usage
+      class << self
+        # Get the client to use (thread-local or default)
+        def client
+          Thread.current[:binance_usdm_client] || BinanceUSDM.default_client
+        end
+        
+        # Execute with a specific client
+        def using(client_instance)
+          previous = Thread.current[:binance_usdm_client]
+          Thread.current[:binance_usdm_client] = client_instance
+          yield
+        ensure
+          Thread.current[:binance_usdm_client] = previous
+        end
+        
+        # Place a new order (class method)
+        # @example BinanceUSDM::Resources::Order.create(symbol: "ETHUSDT", side: :buy, type: :market, quantity: "0.1")
+        def create(symbol:, side:, type:, **kwargs)
+          client.order.place(symbol: symbol, side: side, type: type, **kwargs)
+        end
+        
+        # Find an order by ID or client_order_id
+        # @example BinanceUSDM::Resources::Order.find(symbol: "ETHUSDT", order_id: 123456)
+        def find(symbol:, order_id: nil, client_order_id: nil, **kwargs)
+          client.order.find(symbol: symbol, order_id: order_id, client_order_id: client_order_id, **kwargs)
+        end
+        
+        # Get open orders
+        # @example BinanceUSDM::Resources::Order.open(symbol: "ETHUSDT")
+        def open(symbol: nil, **kwargs)
+          symbol ? client.order.open_orders(symbol: symbol) : client.order.all_open_orders
+        end
+        
+        # Cancel an order
+        # @example BinanceUSDM::Resources::Order.cancel(symbol: "ETHUSDT", order_id: 123456)
+        def cancel(symbol:, order_id: nil, client_order_id: nil, **kwargs)
+          client.order.cancel(symbol: symbol, order_id: order_id, client_order_id: client_order_id, **kwargs)
+        end
+        
+        # Cancel all orders for a symbol
+        # @example BinanceUSDM::Resources::Order.cancel_all(symbol: "ETHUSDT")
+        def cancel_all(symbol:, **kwargs)
+          client.order.cancel_all(symbol: symbol, **kwargs)
+        end
+        
+        # Batch create orders
+        # @example BinanceUSDM::Resources::Order.batch_create([{symbol: "ETHUSDT", ...}, {symbol: "BTCUSDT", ...}])
+        def batch_create(orders_array, **kwargs)
+          raise NotImplementedError, "Batch order creation not yet implemented"
+        end
+        
+        # Batch cancel orders
+        # @example BinanceUSDM::Resources::Order.batch_cancel(symbol: "ETHUSDT", order_ids: [123, 456])
+        def batch_cancel(symbol:, order_ids: nil, client_order_ids: nil, **kwargs)
+          client.order.batch_cancel(symbol: symbol, order_ids: order_ids, client_order_ids: client_order_ids, **kwargs)
+        end
+      end
       # Place a new order (FULL parameter support)
       # @param symbol [String] Trading symbol (e.g., "BTCUSDT")
       # @param side [String] Order side: BUY or SELL

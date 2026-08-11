@@ -1,32 +1,91 @@
-```
+# Compiled and build artifacts
+*.o
+*.obj
+*.out
+*.a
+*.so
+*.dll
+*.exe
+*.class
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.jar
+*.war
+*.ear
+*.tar
+*.zip
+*.gz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+
 # Dependencies
-vendor/bundle/
-.bundle/
-
-# Build artifacts
-*.gem
-*.rbc
-coverage/
-.rspec_results
-test/tmp/
-test/version_tmp/
-
-# Environment variables
+node_modules/
+venv/
+.venv/
 .env
 .env.local
-.env.*
+.env.
+.jenv-version
+.ruby-version
+.bundle/
+vendor/bundle/
+target/
+.gradle/
+.build/
+dist/
+build/
+coverage/
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.nyc_output/
+coverage/lcov-report/
 
-# Editor/IDE files
+# Editors and IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *.tmp
-
-# OS generated files
+*.log
+*~
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-```
+# Images (if accidentally added)
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.webm
+*.svg
+*.ico
+*.tiff
+*.tif
+*.psd
+*.ai
+*.eps
+*.raw
+*.cr2
+*.nef
+*.orf
+*.sr2

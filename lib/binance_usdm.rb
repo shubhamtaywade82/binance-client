@@ -69,12 +69,34 @@ module BinanceUSDM
   
   # Configuration class for BinanceUSDM client
   class Configuration
-    attr_accessor :api_key, :secret_key, :testnet, :logger
+    attr_accessor :api_key, :secret_key, :testnet, :logger, :recv_window
     
     def initialize
       @testnet = false
       @logger = nil
+      @recv_window = 5000
     end
+  end
+  
+  # Get or create the default client used by class methods
+  # @return [API] Default API client
+  def self.default_client
+    @default_client ||= begin
+      api_key = configuration&.api_key || ENV["BINANCE_API_KEY"]
+      secret_key = configuration&.secret_key || ENV["BINANCE_SECRET_KEY"]
+      testnet = configuration&.testnet || false
+      
+      raise ConfigurationError, "No API credentials configured. Call BinanceUSDM.configure or pass api_key/secret_key to client" unless api_key && secret_key
+      
+      API.new(api_key: api_key, secret_key: secret_key, testnet: testnet)
+    end
+  end
+  
+  # Set the default client
+  # @param client [API] Client to use as default
+  # @return [API]
+  def self.default_client=(client)
+    @default_client = client
   end
   
   # Create a new API client instance
@@ -89,6 +111,21 @@ module BinanceUSDM
     
     API.new(api_key: api_key, secret_key: secret_key, testnet: testnet)
   end
+  
+  # Execute block with a specific client for thread-safe multi-account support
+  # @param client [API] Client to use within the block
+  # @yield Block to execute with the specified client
+  # @return Result of the block
+  def self.using(client)
+    previous_client = Thread.current[:binance_usdm_client]
+    Thread.current[:binance_usdm_client] = client
+    yield
+  ensure
+    Thread.current[:binance_usdm_client] = previous_client
+  end
+  
+  # Custom error for missing configuration
+  class ConfigurationError < Error; end
   
   # Main API class providing access to all resources
   class API
