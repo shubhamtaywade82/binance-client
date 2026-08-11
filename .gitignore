@@ -1,91 +1,36 @@
-# Compiled and build artifacts
-*.o
-*.obj
-*.out
-*.a
-*.so
-*.dll
-*.exe
-*.class
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-*.jar
-*.war
-*.ear
-*.tar
-*.zip
-*.gz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
-
+```
 # Dependencies
-node_modules/
-venv/
-.venv/
+vendor/bundle/
+.bundle/
+
+# Logs
+*.log
+.log
+
+# Environment
 .env
 .env.local
-.env.
-.jenv-version
-.ruby-version
-.bundle/
-vendor/bundle/
-target/
-.gradle/
-.build/
-dist/
-build/
-coverage/
-htmlcov/
-.mypy_cache/
-.pytest_cache/
-.nyc_output/
-coverage/lcov-report/
+.env.*
 
-# Editors and IDEs
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *.tmp
-*.log
-*~
+
+# OS
 .DS_Store
 Thumbs.db
 
-# Images (if accidentally added)
-*.png
-*.jpg
-*.jpeg
-*.bmp
-*.gif
-*.webm
-*.svg
-*.ico
-*.tiff
-*.tif
-*.psd
-*.ai
-*.eps
-*.raw
-*.cr2
-*.nef
-*.orf
-*.sr2
+# Ruby specific
+*.gem
+*.rbc
+coverage/
+.rspec
+.yardoc
+_yardoc/
+doc/
+.rubocop.yml
+.yardopts
+```
