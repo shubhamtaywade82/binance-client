@@ -1,28 +1,39 @@
 ```
+# Compiled and build artifacts
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+*.out
+
 # Dependencies
 vendor/bundle/
 .bundle/
 
-# Logs
+# Logs and temp files
 *.log
-.log
+*.tmp
+*.swp
+
+# Editors
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# System files
+.DS_Store
+Thumbs.db
 
 # Environment
 .env
 .env.local
 .env.*
-
-# Editor/IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# OS
-.DS_Store
-Thumbs.db
-
 # Ruby specific
 *.gem
 *.rbc
@@ -31,7 +42,6 @@ coverage/
 .yardoc
 _yardoc/
 doc/
-.rubocop.yml
 .yardopts
 ```
 .rspec_status
