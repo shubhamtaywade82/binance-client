@@ -1,6 +1,8 @@
 # BinanceUSDM - Ruby SDK for Binance USD-M Futures
 
+[![CI](https://github.com/shubhamtaywade82/binance_usdm/actions/workflows/ci.yml/badge.svg)](https://github.com/shubhamtaywade82/binance_usdm/actions/workflows/ci.yml)
 [![Gem Version](https://badge.fury.io/rb/binance_usdm.svg)](https://rubygems.org/gems/binance_usdm)
+[![Ruby Style Guide](https://img.shields.io/badge/code_style-rubocop-brightgreen.svg)](https://github.com/rubocop/rubocop)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
 
 **BinanceUSDM** is a production-grade Ruby SDK for the Binance USD-M Futures API. Build algorithmic trading systems, market data pipelines, and portfolio management tools with clean Ruby abstractions, typed models, and resilient WebSocket streaming.

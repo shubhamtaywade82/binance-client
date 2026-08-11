@@ -1,0 +1,34 @@
+name: Live Integration
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  testnet:
+    name: Binance Testnet integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: binance-testnet
+
+    env:
+      BINANCE_TESTNET: "true"
+      BINANCE_TESTNET_API_KEY: ${{ secrets.BINANCE_TESTNET_API_KEY }}
+      BINANCE_TESTNET_SECRET_KEY: ${{ secrets.BINANCE_TESTNET_SECRET_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Run integration tests
+        run: bundle exec rake integration
