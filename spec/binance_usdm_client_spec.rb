@@ -3,14 +3,14 @@
 require 'spec_helper'
 require 'binance_usdm'
 
-RSpec.describe BinanceUSDM::Client do
+RSpec.describe Binance::USDM::Client do
   include_context 'with binance client'
 
   describe '#initialize' do
     context 'with testnet enabled' do
       it 'creates a client with testnet URL' do
         expect(client.testnet).to be(true)
-        expect(client.instance_variable_get(:@base_url)).to eq(BinanceUSDM::Constants::Urls::TESTNET_REST_API_BASE)
+        expect(client.instance_variable_get(:@base_url)).to eq(Binance::USDM::Constants::Urls::TESTNET_REST_API_BASE)
       end
     end
 
@@ -19,7 +19,7 @@ RSpec.describe BinanceUSDM::Client do
 
       it 'creates a client with production URL' do
         expect(client.testnet).to be(false)
-        expect(client.instance_variable_get(:@base_url)).to eq(BinanceUSDM::Constants::Urls::REST_API_BASE)
+        expect(client.instance_variable_get(:@base_url)).to eq(Binance::USDM::Constants::Urls::REST_API_BASE)
       end
     end
 
@@ -62,7 +62,7 @@ RSpec.describe BinanceUSDM::Client do
 
         expect do
           client.get('/fapi/v1/time')
-        end.to raise_error(BinanceUSDM::ConnectionError, /Failed to connect/)
+        end.to raise_error(Binance::USDM::ConnectionError, /Failed to connect/)
       end
     end
 
@@ -72,21 +72,21 @@ RSpec.describe BinanceUSDM::Client do
 
         expect do
           client.get('/fapi/v1/time')
-        end.to raise_error(BinanceUSDM::ConnectionError, /timeout/)
+        end.to raise_error(Binance::USDM::ConnectionError, /timeout/)
       end
     end
   end
 end
 
-RSpec.describe BinanceUSDM::API do
+RSpec.describe Binance::USDM::API do
   include_context 'with binance client'
 
   describe 'initialization and resource access' do
     it 'exposes order, account, market, and algo_orders resources' do
-      expect(api.order).to be_a(BinanceUSDM::Resources::Order)
-      expect(api.account).to be_a(BinanceUSDM::Resources::Account)
-      expect(api.market).to be_a(BinanceUSDM::Resources::Market)
-      expect(api.algo_orders).to be_a(BinanceUSDM::Resources::AlgoOrder)
+      expect(api.order).to be_a(Binance::USDM::Resources::Order)
+      expect(api.account).to be_a(Binance::USDM::Resources::Account)
+      expect(api.market).to be_a(Binance::USDM::Resources::Market)
+      expect(api.algo_orders).to be_a(Binance::USDM::Resources::AlgoOrder)
     end
 
     it 'delegates convenience methods to resources' do
@@ -100,25 +100,25 @@ RSpec.describe BinanceUSDM::API do
     end
   end
 
-  describe 'BinanceUSDM.configure' do
+  describe 'Binance::USDM.configure' do
     it 'allows global configuration' do
-      BinanceUSDM.configure do |config|
+      Binance::USDM.configure do |config|
         config.api_key = 'config_api_key'
         config.secret_key = 'config_secret_key'
         config.testnet = true
       end
 
-      client = BinanceUSDM.client
+      client = Binance::USDM.client
       expect(client.client.api_key).to eq('config_api_key')
       expect(client.client.testnet).to be(true)
     end
   end
 
-  describe 'BinanceUSDM.using' do
+  describe 'Binance::USDM.using' do
     it 'executes block in scoped context' do
-      scoped_client = BinanceUSDM.client(api_key: 'scoped_key', secret_key: 'scoped_secret', testnet: true)
+      scoped_client = Binance::USDM.client(api_key: 'scoped_key', secret_key: 'scoped_secret', testnet: true)
 
-      BinanceUSDM.using(scoped_client) do
+      Binance::USDM.using(scoped_client) do
         expect(Thread.current[:binance_usdm_client]).to eq(scoped_client)
       end
 
@@ -129,10 +129,10 @@ end
 
 RSpec.describe Binance::Client do
   describe '#um_futures' do
-    it 'instantiates and returns a BinanceUSDM API client' do
+    it 'instantiates and returns a Binance::USDM API client' do
       unified_client = Binance.client(api_key: 'api_key', secret_key: 'secret_key', testnet: true)
       expect(unified_client.authenticated?).to be(true)
-      expect(unified_client.um_futures).to be_a(BinanceUSDM::API)
+      expect(unified_client.um_futures).to be_a(Binance::USDM::API)
       expect(unified_client.um_futures.client.api_key).to eq('api_key')
     end
 
@@ -144,7 +144,7 @@ RSpec.describe Binance::Client do
   end
 end
 
-RSpec.describe BinanceUSDM::SignatureHelper do
+RSpec.describe Binance::USDM::SignatureHelper do
   describe '.generate_signature' do
     it 'generates valid HMAC-SHA256 signature' do
       sig = described_class.generate_signature('secret', 'symbol=BTCUSDT&timestamp=1699000000000')
@@ -173,7 +173,7 @@ RSpec.describe BinanceUSDM::SignatureHelper do
   end
 end
 
-RSpec.describe BinanceUSDM::WebSocket::UserDataClient do
+RSpec.describe Binance::USDM::WebSocket::UserDataClient do
   include_context 'with binance client'
 
   let(:uds) { described_class.new(client: client) }
@@ -207,7 +207,7 @@ RSpec.describe BinanceUSDM::WebSocket::UserDataClient do
   end
 end
 
-RSpec.describe BinanceUSDM::WebSocket::OrderBook do
+RSpec.describe Binance::USDM::WebSocket::OrderBook do
   let(:book) { described_class.new(symbol: 'BTCUSDT') }
 
   describe 'L2 Order Book snapshot and sequence synchronization' do

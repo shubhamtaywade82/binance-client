@@ -2,11 +2,11 @@
 
 require 'spec_helper'
 
-RSpec.describe BinanceUSDM::Resources::Order do
+RSpec.describe Binance::USDM::Resources::Order do
   include_context 'with binance client'
 
-  let(:order_resource) { BinanceUSDM::Resources::Order.new(client) }
-  let(:base_url) { BinanceUSDM::Constants::Urls::TESTNET_REST_API_BASE }
+  let(:order_resource) { Binance::USDM::Resources::Order.new(client) }
+  let(:base_url) { Binance::USDM::Constants::Urls::TESTNET_REST_API_BASE }
 
   before do
     WebMock.disable_net_connect!(allow_localhost: true)
@@ -24,7 +24,7 @@ RSpec.describe BinanceUSDM::Resources::Order do
 
       result = order_resource.open_orders(symbol: 'BTCUSDT')
       expect(result).to be_an(Array)
-      expect(result.first).to be_a(BinanceUSDM::Models::Order)
+      expect(result.first).to be_a(Binance::USDM::Models::Order)
       expect(result.first.order_id).to eq(12_345)
       expect(result.first.active?).to be(true)
     end
@@ -41,7 +41,7 @@ RSpec.describe BinanceUSDM::Resources::Order do
 
       result = order_resource.all_orders(symbol: 'BTCUSDT', limit: 5)
       expect(result).to be_an(Array)
-      expect(result.first).to be_a(BinanceUSDM::Models::Order)
+      expect(result.first).to be_a(Binance::USDM::Models::Order)
       expect(result.first.filled?).to be(true)
     end
   end
@@ -58,7 +58,7 @@ RSpec.describe BinanceUSDM::Resources::Order do
 
       result = order_resource.trades(symbol: 'BTCUSDT', limit: 5)
       expect(result).to be_an(Array)
-      expect(result.first).to be_a(BinanceUSDM::Models::Trade)
+      expect(result.first).to be_a(Binance::USDM::Models::Trade)
       expect(result.first.id).to eq(101)
       expect(result.first.price).to eq('50000.00')
     end
@@ -74,7 +74,7 @@ RSpec.describe BinanceUSDM::Resources::Order do
         )
 
       result = order_resource.find(symbol: 'BTCUSDT', order_id: 12_345)
-      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result).to be_a(Binance::USDM::Models::Order)
       expect(result.order_id).to eq(12_345)
     end
 
@@ -87,7 +87,7 @@ RSpec.describe BinanceUSDM::Resources::Order do
         )
 
       result = order_resource.find(symbol: 'BTCUSDT', orig_client_order_id: 'my_id_1')
-      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result).to be_a(Binance::USDM::Models::Order)
       expect(result.client_order_id).to eq('my_id_1')
     end
   end
@@ -111,7 +111,7 @@ RSpec.describe BinanceUSDM::Resources::Order do
         time_in_force: 'GTC'
       )
 
-      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result).to be_a(Binance::USDM::Models::Order)
       expect(result.order_id).to eq(12_345)
       expect(result.side).to eq('BUY')
     end
@@ -127,7 +127,7 @@ RSpec.describe BinanceUSDM::Resources::Order do
         )
 
       result = order_resource.cancel(symbol: 'BTCUSDT', order_id: 12_345)
-      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result).to be_a(Binance::USDM::Models::Order)
       expect(result.canceled?).to be(true)
     end
   end
@@ -149,7 +149,7 @@ RSpec.describe BinanceUSDM::Resources::Order do
         price: '51000.00'
       )
 
-      expect(result).to be_a(BinanceUSDM::Models::Order)
+      expect(result).to be_a(Binance::USDM::Models::Order)
       expect(result.price).to eq('51000.00')
     end
   end
@@ -223,8 +223,8 @@ RSpec.describe BinanceUSDM::Resources::Order do
           headers: { 'Content-Type' => 'application/json' }
         )
 
-      BinanceUSDM::Resources::Order.using(client) do
-        res = BinanceUSDM::Resources::Order.create(
+      Binance::USDM::Resources::Order.using(client) do
+        res = Binance::USDM::Resources::Order.create(
           symbol: 'BTCUSDT',
           side: 'BUY',
           type: 'LIMIT',

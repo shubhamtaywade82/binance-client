@@ -3,7 +3,7 @@
 require 'spec_helper'
 require 'binance_usdm'
 
-RSpec.describe BinanceUSDM::Models do
+RSpec.describe Binance::USDM::Models do
   describe 'Order model' do
     let(:order_data) do
       {
@@ -25,7 +25,7 @@ RSpec.describe BinanceUSDM::Models do
       }
     end
 
-    subject(:order) { BinanceUSDM::Models::Order.new(order_data) }
+    subject(:order) { Binance::USDM::Models::Order.new(order_data) }
 
     it 'initializes with order data' do
       expect(order.order_id).to eq(12_345)
@@ -122,7 +122,7 @@ RSpec.describe BinanceUSDM::Models do
       }
     end
 
-    subject(:position) { BinanceUSDM::Models::Position.new(position_data) }
+    subject(:position) { Binance::USDM::Models::Position.new(position_data) }
 
     it 'initializes with position data' do
       expect(position.symbol).to eq('BTCUSDT')
@@ -163,10 +163,10 @@ RSpec.describe BinanceUSDM::Models do
       end
     end
 
-    describe '#has_position?' do
+    describe '#position?' do
       context 'when position amount is non-zero' do
         it 'returns true' do
-          expect(position.has_position?).to be(true)
+          expect(position.position?).to be(true)
         end
       end
 
@@ -174,7 +174,7 @@ RSpec.describe BinanceUSDM::Models do
         let(:position_data) { super().merge('positionAmt' => '0.000') }
 
         it 'returns false' do
-          expect(position.has_position?).to be(false)
+          expect(position.position?).to be(false)
         end
       end
     end
@@ -210,7 +210,7 @@ RSpec.describe BinanceUSDM::Models do
       }
     end
 
-    subject(:account) { BinanceUSDM::Models::Account.new(account_data) }
+    subject(:account) { Binance::USDM::Models::Account.new(account_data) }
 
     it 'initializes with account data' do
       expect(account.available_balance).to eq('10000.00')
@@ -257,7 +257,7 @@ RSpec.describe BinanceUSDM::Models do
       }
     end
 
-    subject(:trade) { BinanceUSDM::Models::Trade.new(trade_data) }
+    subject(:trade) { Binance::USDM::Models::Trade.new(trade_data) }
 
     it 'initializes with trade data' do
       expect(trade.id).to eq(12_345)
@@ -286,7 +286,7 @@ RSpec.describe BinanceUSDM::Models do
       }
     end
 
-    subject(:ticker) { BinanceUSDM::Models::Ticker.new(ticker_data) }
+    subject(:ticker) { Binance::USDM::Models::Ticker.new(ticker_data) }
 
     it 'initializes with ticker data' do
       expect(ticker.symbol).to eq('BTCUSDT')
@@ -307,7 +307,7 @@ RSpec.describe BinanceUSDM::Models do
       }
     end
 
-    subject(:balance) { BinanceUSDM::Models::Balance.new(balance_data) }
+    subject(:balance) { Binance::USDM::Models::Balance.new(balance_data) }
 
     it 'initializes with balance data' do
       expect(balance.asset).to eq('USDT')

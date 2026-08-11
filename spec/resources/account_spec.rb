@@ -2,11 +2,11 @@
 
 require 'spec_helper'
 
-RSpec.describe BinanceUSDM::Resources::Account do
+RSpec.describe Binance::USDM::Resources::Account do
   include_context 'with binance client'
 
-  let(:account) { BinanceUSDM::Resources::Account.new(client) }
-  let(:base_url) { BinanceUSDM::Constants::Urls::TESTNET_REST_API_BASE }
+  let(:account) { Binance::USDM::Resources::Account.new(client) }
+  let(:base_url) { Binance::USDM::Constants::Urls::TESTNET_REST_API_BASE }
 
   before do
     WebMock.disable_net_connect!(allow_localhost: true)
@@ -28,7 +28,7 @@ RSpec.describe BinanceUSDM::Resources::Account do
         )
 
       result = account.info
-      expect(result).to be_a(BinanceUSDM::Models::Account)
+      expect(result).to be_a(Binance::USDM::Models::Account)
       expect(result.available_balance).to eq('10000.00')
       expect(result.total_wallet_balance).to eq('10500.00')
       expect(result.equity).to eq('11000.0')
@@ -47,7 +47,7 @@ RSpec.describe BinanceUSDM::Resources::Account do
 
       result = account.balance
       expect(result).to be_an(Array)
-      expect(result.first).to be_a(BinanceUSDM::Models::Balance)
+      expect(result.first).to be_a(Binance::USDM::Models::Balance)
       expect(result.first.asset).to eq('USDT')
       expect(result.first.wallet_balance).to eq('10000.00')
     end
@@ -65,7 +65,7 @@ RSpec.describe BinanceUSDM::Resources::Account do
 
       result = account.positions(symbol: 'BTCUSDT')
       expect(result).to be_an(Array)
-      expect(result.first).to be_a(BinanceUSDM::Models::Position)
+      expect(result.first).to be_a(Binance::USDM::Models::Position)
       expect(result.first.symbol).to eq('BTCUSDT')
       expect(result.first.leverage).to eq(10)
     end
@@ -74,7 +74,9 @@ RSpec.describe BinanceUSDM::Resources::Account do
   describe '#position_mode' do
     it 'returns current position mode' do
       stub_request(:get, %r{#{base_url}/fapi/v1/positionSide/dual})
-        .to_return(status: 200, body: { 'dualSidePosition' => true }.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200,
+                   body: { 'dualSidePosition' => true }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
 
       result = account.position_mode
       expect(result).to eq({ 'dualSidePosition' => true })
@@ -174,7 +176,9 @@ RSpec.describe BinanceUSDM::Resources::Account do
   describe 'listenKey management' do
     it 'creates, keeps alive, and closes listenKey' do
       stub_request(:post, %r{#{base_url}/fapi/v1/listenKey})
-        .to_return(status: 200, body: { 'listenKey' => 'test_key_123' }.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200,
+                   body: { 'listenKey' => 'test_key_123' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
       stub_request(:put, %r{#{base_url}/fapi/v1/listenKey})
         .to_return(status: 200, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
       stub_request(:delete, %r{#{base_url}/fapi/v1/listenKey})
@@ -191,10 +195,12 @@ RSpec.describe BinanceUSDM::Resources::Account do
   describe 'class methods' do
     it 'delegates info and balance using scoped client' do
       stub_request(:get, %r{#{base_url}/fapi/v2/account})
-        .to_return(status: 200, body: { 'availableBalance' => '5000.00' }.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200,
+                   body: { 'availableBalance' => '5000.00' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
 
-      BinanceUSDM::Resources::Account.using(client) do
-        res = BinanceUSDM::Resources::Account.info
+      Binance::USDM::Resources::Account.using(client) do
+        res = Binance::USDM::Resources::Account.info
         expect(res.available_balance).to eq('5000.00')
       end
     end

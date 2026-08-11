@@ -1,0 +1,142 @@
+# frozen_string_literal: true
+
+require 'faraday'
+require 'json'
+require_relative 'request'
+require_relative 'response'
+require_relative '../helpers/signature_helper'
+
+module Binance
+  module USDM
+    module Transport
+      # HTTP transport layer for Binance API communication.
+      class HTTP
+        attr_reader :base_url, :api_key, :secret_key, :timeout, :logger
+
+        def initialize(base_url:, api_key:, secret_key:, timeout: 30, logger: nil)
+          @base_url = base_url
+          @api_key = api_key
+          @secret_key = secret_key
+          @timeout = timeout
+          @logger = logger || default_logger
+          @connection = nil
+        end
+
+        # Execute HTTP request
+        # @param request [Request]
+        # @param timestamp_provider [Object]
+        # @return [Response]
+        def execute(request, timestamp_provider: nil)
+          url, body = prepare_url_and_body(request, timestamp_provider)
+          headers = build_headers(request)
+          log_request(request, url, headers)
+
+          build_response(connection.run_request(request.method, url, body, headers))
+        rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
+          raise_transport_error(e)
+        end
+
+        def connection
+          @connection ||= Faraday.new do |conn|
+            conn.adapter :net_http
+            conn.options.timeout = timeout
+            conn.options.open_timeout = 10
+          end
+        end
+
+        private
+
+        def raise_transport_error(error)
+          if error.is_a?(Faraday::TimeoutError)
+            logger.error("Request timeout: #{error.message}")
+            raise TimeoutError, "Request timeout: #{error.message}"
+          end
+
+          logger.error("Connection failed: #{error.message}")
+          raise ConnectionError, "Failed to connect to Binance API: #{error.message}"
+        end
+
+        def build_response(response)
+          Response.new(
+            status: response.status,
+            body: parse_body(response.body),
+            headers: response.headers.to_h
+          )
+        end
+
+        def prepare_url_and_body(request, timestamp_provider)
+          path_url = "#{base_url}#{request.path}"
+          if request.signed?
+            build_signed_payload(request, timestamp_provider || SignatureHelper, path_url)
+          else
+            build_unsigned_payload(request, path_url)
+          end
+        end
+
+        def build_signed_payload(request, provider, path_url)
+          query = build_signed_query(request, provider)
+          if query_target?(request)
+            ["#{path_url}?#{query}", nil]
+          else
+            [path_url, query]
+          end
+        end
+
+        def build_signed_query(request, provider)
+          params = request.params.dup
+          SignatureHelper.build_signed_query_for_transport(
+            params, api_key, secret_key, timestamp: provider.timestamp,
+                                         recv_window: params.delete(:recv_window) || params.delete(:recvWindow) || 5000
+          )
+        end
+
+        def query_target?(request)
+          %i[get delete].include?(request.method) || request.encoding == :query
+        end
+
+        def build_unsigned_payload(request, path_url)
+          formatted = SignatureHelper.format_params(request.params)
+          return [path_url, nil] if formatted.empty?
+
+          if query_target?(request)
+            query = URI.encode_www_form(formatted)
+            ["#{path_url}?#{query}", nil]
+          else
+            body = request.encoding == :json ? JSON.dump(formatted) : URI.encode_www_form(formatted)
+            [path_url, body]
+          end
+        end
+
+        def build_headers(request)
+          content_type = request.encoding == :json ? 'application/json' : 'application/x-www-form-urlencoded'
+          { 'Content-Type' => content_type }.tap do |headers|
+            headers['X-MBX-APIKEY'] = api_key if api_key && (request.needs_api_key? || request.signed?)
+          end
+        end
+
+        def parse_body(body)
+          return {} if body.nil? || body.empty?
+
+          JSON.parse(body)
+        rescue JSON::ParserError => e
+          logger.error("Failed to parse response: #{e.message}")
+          raise ApiError.new(message: "Invalid JSON response: #{e.message}", code: -1)
+        end
+
+        def log_request(request, _url, _headers)
+          return unless logger.debug?
+
+          logger.debug("[REQUEST] #{request.method_str} #{request.path} params=#{sanitize_params(request.params)}")
+        end
+
+        def sanitize_params(params)
+          params.dup.tap { |p| %i[apiKey signature].each { |k| p[k] = '***REDACTED***' if p.key?(k) } }
+        end
+
+        def default_logger
+          Logger.new($stdout).tap { |log| log.level = ENV.fetch('BINANCE_LOG_LEVEL', 'WARN').to_sym }
+        end
+      end
+    end
+  end
+end

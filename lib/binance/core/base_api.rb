@@ -16,18 +16,7 @@ module Binance
         endpoint_spec = EndpointRegistry.find(product, endpoint_name)
         raise ArgumentError, "Unknown endpoint: #{product}.#{endpoint_name}" unless endpoint_spec
 
-        client.execute(
-          Transport::EndpointSpec.new(
-            path: endpoint_spec[:path],
-            method: endpoint_spec[:method],
-            security: endpoint_spec[:security],
-            encoding: endpoint_spec[:encoding],
-            weight: endpoint_spec[:weight] || 1,
-            order_count_10s: endpoint_spec[:order_count_10s] || 0,
-            order_count_1m: endpoint_spec[:order_count_1m] || 0
-          ),
-          params
-        )
+        client.execute(Transport::EndpointSpec.new(**endpoint_spec), params)
       end
     end
   end

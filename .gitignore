@@ -35,3 +35,15 @@ Thumbs.db
 .env.local
 .env.*
 ```
+# Ruby specific
+*.gem
+*.rbc
+coverage/
+.rspec
+.yardoc
+_yardoc/
+doc/
+.rubocop.yml
+.yardopts
+```
+.rspec_status
