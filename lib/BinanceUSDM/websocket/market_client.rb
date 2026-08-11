@@ -7,6 +7,15 @@ module BinanceUSDM
   module WebSocket
     # Market data WebSocket client for real-time market updates.
     class MarketClient < BaseClient
+      EVENT_HANDLERS = {
+        '24hrTicker' => :on_ticker,
+        'trade' => :on_trade,
+        'kline' => :on_kline,
+        'forceOrder' => :on_liquidation,
+        'markPriceUpdate' => :on_mark_price,
+        'depthUpdate' => :on_depth
+      }.freeze
+
       attr_accessor :on_ticker, :on_trade, :on_orderbook, :on_kline,
                     :on_liquidation, :on_mark_price, :on_depth
 
@@ -117,32 +126,31 @@ module BinanceUSDM
       # Handle incoming messages
       # @param data [Hash] Message data
       def on_message(data)
-        # Handle subscription response
-        if data.key?('result') || data.key?('id')
-          logger.debug("Subscription response: #{data.inspect}")
-          return
-        end
+        return handle_subscription_response(data) if data.key?('result') || data.key?('id')
 
-        # Handle stream data
-        stream_data = data['data'] || data
+        dispatch_stream(data['data'] || data, data)
+      end
 
-        if stream_data.key?('e') && stream_data['e'] == '24hrTicker'
-          on_ticker&.call(stream_data)
-        elsif stream_data.key?('e') && stream_data['e'] == 'trade'
-          on_trade&.call(stream_data)
-        elsif stream_data.key?('bids') && stream_data.key?('asks')
-          on_orderbook&.call(stream_data)
-        elsif stream_data.key?('e') && stream_data['e'] == 'kline'
-          on_kline&.call(stream_data)
-        elsif stream_data.key?('e') && stream_data['e'] == 'forceOrder'
-          on_liquidation&.call(stream_data)
-        elsif stream_data.key?('e') && stream_data['e'] == 'markPriceUpdate'
-          on_mark_price&.call(stream_data)
-        elsif stream_data.key?('e') && stream_data['e'] == 'depthUpdate'
-          on_depth&.call(stream_data)
+      # Handle subscription confirmation responses
+      def handle_subscription_response(data)
+        logger.debug("Subscription response: #{data.inspect}")
+      end
+
+      # Route stream data to the registered callback
+      def dispatch_stream(stream_data, original)
+        handler = stream_handler(stream_data)
+        if handler
+          public_send(handler)&.call(stream_data)
         else
-          logger.debug("Unknown message type: #{data.inspect}")
+          logger.debug("Unknown message type: #{original.inspect}")
         end
+      end
+
+      # Resolve callback accessor for a stream message
+      def stream_handler(stream_data)
+        return :on_orderbook if stream_data.key?('bids') && stream_data.key?('asks')
+
+        EVENT_HANDLERS[stream_data['e']]
       end
     end
   end

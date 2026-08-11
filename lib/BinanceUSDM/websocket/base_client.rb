@@ -26,9 +26,7 @@ module BinanceUSDM
 
       # Start WebSocket connection
       def connect
-        EM.run do
-          setup_connection
-        end
+        EM.run { setup_connection }
       end
 
       # Stop WebSocket connection
@@ -65,13 +63,6 @@ module BinanceUSDM
 
       private
 
-      # Build WebSocket URL
-      # @return [String] WebSocket URL
-      def build_url
-        base = testnet ? Constants::Urls::WEBSOCKET_TESTNET_BASE : Constants::Urls::WEBSOCKET_BASE
-        "#{base}/stream"
-      end
-
       # Build combined stream URL
       # @return [String] Combined stream URL
       def build_combined_url
@@ -83,35 +74,47 @@ module BinanceUSDM
       # Setup WebSocket connection
       def setup_connection
         url = build_combined_url
-
         logger.info("Connecting to #{url}")
 
         @ws = Faye::WebSocket::Client.new(url)
+        register_handlers
+      end
 
-        @ws.on(:open) do |event|
-          logger.info('WebSocket connected')
-          @reconnect_attempts = 0
-          on_open(event)
-        end
+      # Register WebSocket event handlers
+      def register_handlers
+        @ws.on(:open) { |event| handle_open(event) }
+        @ws.on(:message) { |event| handle_message(event) }
+        @ws.on(:close) { |event| handle_close(event) }
+        @ws.on(:error) { |event| handle_error(event) }
+      end
 
-        @ws.on(:message) do |event|
-          data = JSON.parse(event.data)
-          on_message(data)
-        rescue JSON::ParserError => e
-          logger.error("Failed to parse message: #{e.message}")
-        end
+      # Handle connection open event
+      def handle_open(event)
+        logger.info('WebSocket connected')
+        @reconnect_attempts = 0
+        on_open(event)
+      end
 
-        @ws.on(:close) do |event|
-          logger.warn("WebSocket closed: code=#{event.code} reason=#{event.reason}")
-          @ws = nil
-          reconnect if should_reconnect?
-          on_close(event)
-        end
+      # Handle incoming message event
+      def handle_message(event)
+        data = JSON.parse(event.data)
+        on_message(data)
+      rescue JSON::ParserError => e
+        logger.error("Failed to parse message: #{e.message}")
+      end
 
-        @ws.on(:error) do |event|
-          logger.error("WebSocket error: #{event.message}")
-          on_error(event)
-        end
+      # Handle connection close event
+      def handle_close(event)
+        logger.warn("WebSocket closed: code=#{event.code} reason=#{event.reason}")
+        @ws = nil
+        reconnect if should_reconnect?
+        on_close(event)
+      end
+
+      # Handle connection error event
+      def handle_error(event)
+        logger.error("WebSocket error: #{event.message}")
+        on_error(event)
       end
 
       # Send request over WebSocket
@@ -122,7 +125,6 @@ module BinanceUSDM
 
         id = SecureRandom.uuid
         message = { method: method, params: params, id: id }
-        message[:id] = id
 
         @ws.send(message.to_json)
         logger.debug("Sent: #{message.inspect}")
@@ -154,27 +156,19 @@ module BinanceUSDM
 
       # Callback when connection opens
       # @param event [Event] Open event
-      def on_open(event)
-        # Override in subclass
-      end
+      def on_open(event); end
 
       # Callback when message received
       # @param data [Hash] Message data
-      def on_message(data)
-        # Override in subclass
-      end
+      def on_message(data); end
 
       # Callback when connection closes
       # @param event [Event] Close event
-      def on_close(event)
-        # Override in subclass
-      end
+      def on_close(event); end
 
       # Callback when error occurs
       # @param event [Event] Error event
-      def on_error(event)
-        # Override in subclass
-      end
+      def on_error(event); end
 
       # Default logger
       # @return [Logger]

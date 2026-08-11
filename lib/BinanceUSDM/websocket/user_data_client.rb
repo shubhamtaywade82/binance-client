@@ -9,6 +9,12 @@ module BinanceUSDM
     class UserDataClient < BaseClient
       REFRESH_INTERVAL = 1800 # 30 minutes in seconds
 
+      EVENT_HANDLERS = {
+        'ORDER_TRADE_UPDATE' => [:on_order_update, 'o'],
+        'ACCOUNT_UPDATE' => [:on_account_update, 'a'],
+        'ACCOUNT_CONFIG_UPDATE' => [:on_config_update, 'ac']
+      }.freeze
+
       attr_reader :client, :listen_key
       attr_accessor :on_order_update, :on_account_update, :on_config_update
 
@@ -82,21 +88,24 @@ module BinanceUSDM
 
       # Handle incoming private WebSocket events
       def on_message(data)
-        event_type = data['e']
+        handler = EVENT_HANDLERS[data['e']]
+        return dispatch_event(handler, data) if handler
 
-        case event_type
-        when 'ORDER_TRADE_UPDATE'
-          on_order_update&.call(data['o'] || data)
-        when 'ACCOUNT_UPDATE'
-          on_account_update&.call(data['a'] || data)
-        when 'ACCOUNT_CONFIG_UPDATE'
-          on_config_update&.call(data['ac'] || data)
-        when 'listenKeyExpired'
-          logger.warn('ListenKey expired. Re-authenticating...')
-          ensure_listen_key
-        else
-          logger.debug("User stream event: #{data.inspect}")
-        end
+        return handle_expired_listen_key if data['e'] == 'listenKeyExpired'
+
+        logger.debug("User stream event: #{data.inspect}")
+      end
+
+      # Invoke registered callback with event payload
+      def dispatch_event(handler, data)
+        callback, payload_key = handler
+        public_send(callback)&.call(data[payload_key] || data)
+      end
+
+      # Refresh ListenKey after expiry
+      def handle_expired_listen_key
+        logger.warn('ListenKey expired. Re-authenticating...')
+        ensure_listen_key
       end
     end
   end

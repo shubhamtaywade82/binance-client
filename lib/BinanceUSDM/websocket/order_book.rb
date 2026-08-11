@@ -57,20 +57,13 @@ module BinanceUSDM
       # Process incoming depthUpdate event from WebSocket
       # @param event [Hash] depthUpdate event payload
       def process_event(event)
-        unless @synced
+        if !@synced
           @event_buffer << event
-          return
-        end
-
-        # Continuity check: previous update ID must match pu
-        if event['pu'] && event['pu'] != @last_update_id
+        elsif event['pu'] && event['pu'] != @last_update_id
           resync
-          return
+        else
+          apply_event(event)
         end
-
-        apply_price_levels(event['b'], @bids)
-        apply_price_levels(event['a'], @asks)
-        @last_update_id = event['u']
       end
 
       # Apply REST depth snapshot to initialize order book
@@ -111,17 +104,21 @@ module BinanceUSDM
         @event_buffer.each do |event|
           next if event['u'] < @last_update_id
 
-          if @last_update_id.between?(event['U'], event['u'])
-            apply_price_levels(event['b'], @bids)
-            apply_price_levels(event['a'], @asks)
-            @last_update_id = event['u']
-          elsif event['pu'] == @last_update_id
-            apply_price_levels(event['b'], @bids)
-            apply_price_levels(event['a'], @asks)
-            @last_update_id = event['u']
-          end
+          apply_event(event) if in_sequence?(event)
         end
         @event_buffer.clear
+      end
+
+      # Apply event if it chains from the current update ID
+      def in_sequence?(event)
+        @last_update_id.between?(event['U'], event['u']) || event['pu'] == @last_update_id
+      end
+
+      # Apply price level changes and advance the update ID
+      def apply_event(event)
+        apply_price_levels(event['b'], @bids)
+        apply_price_levels(event['a'], @asks)
+        @last_update_id = event['u']
       end
 
       # Update price levels (quantity 0 removes price level)
