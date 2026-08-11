@@ -17,6 +17,7 @@ module BinanceUSDM
       private
 
       def perform(request_obj, endpoint)
+        connection
         response = @http.execute(request_obj, timestamp_provider: clock)
         rate_limiter.update_from_headers(response.headers)
         handle_response_body(response.body, response.status, response.headers, endpoint)

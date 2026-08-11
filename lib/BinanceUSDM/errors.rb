@@ -91,6 +91,8 @@ module BinanceUSDM
   # Raised when server returns 5xx errors.
   class ServerError < BinanceError; end
 
+  require_relative 'errors/error_code_map'
+
   # Combined mapping of all Binance error codes to error classes.
   ERROR_CODE_MAP = ErrorCodesCore::CODES.merge(ErrorCodesAccount::CODES).freeze
 

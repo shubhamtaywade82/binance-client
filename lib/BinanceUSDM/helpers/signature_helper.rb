@@ -72,17 +72,18 @@ module BinanceUSDM
 
       params.transform_keys { |key| to_camel_case(key) }
             .compact
-            .transform_values do |v|
-              case v
-              when Symbol then v.to_s
-              when TrueClass then 'true'
-              when FalseClass then 'false'
-              else v
-              end
-            end
+            .transform_values { |value| format_value(value) }
     end
 
     private
+
+    # Convert values to their wire string representation where needed
+    def format_value(value)
+      case value
+      when Symbol, TrueClass, FalseClass then value.to_s
+      else value
+      end
+    end
 
     def detect_algorithm(key)
       key_str = key.to_s

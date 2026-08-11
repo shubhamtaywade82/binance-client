@@ -5,76 +5,99 @@ require_relative '../models'
 
 module BinanceUSDM
   module Resources
-    # Order resource for managing futures orders.
-    # Implements all Binance USDⓈ-M Futures order endpoints.
-    # Supports both instance methods (via client) and class methods (via default_client).
-    class Order < BaseAPI
-      # Class methods for ORM/ActiveRecord-style usage
-      class << self
-        # Get the client to use (thread-local or default)
-        def client
-          Thread.current[:binance_usdm_client] || BinanceUSDM.default_client
-        end
+    # Maps order option keywords to Binance API parameters.
+    # `enum: true` values are uppercased (API expects ENUM strings).
+    ORDER_OPTIONS = {
+      quantity: { param: :quantity },
+      price: { param: :price },
+      position_side: { param: :positionSide, enum: true },
+      time_in_force: { param: :timeInForce, enum: true },
+      reduce_only: { param: :reduceOnly },
+      close_position: { param: :closePosition },
+      client_order_id: { param: :newClientOrderId },
+      response_type: { param: :newOrderRespType, enum: true },
+      stop_price: { param: :stopPrice },
+      activation_price: { param: :activationPrice },
+      callback_rate: { param: :callbackRate },
+      working_type: { param: :workingType, enum: true },
+      price_protect: { param: :priceProtect },
+      price_match: { param: :priceMatch, enum: true },
+      self_trade_prevention_mode: { param: :selfTradePreventionMode, enum: true },
+      good_till_date: { param: :goodTillDate },
+      recv_window: { param: :recvWindow }
+    }.freeze
 
-        # Execute with a specific client
-        def using(client_instance)
-          previous = Thread.current[:binance_usdm_client]
-          Thread.current[:binance_usdm_client] = client_instance
-          yield
-        ensure
-          Thread.current[:binance_usdm_client] = previous
-        end
-
-        # Place a new order (class method)
-        # @example BinanceUSDM::Resources::Order.create(symbol: "ETHUSDT", side: :buy, type: :market, quantity: "0.1")
-        def create(symbol:, side:, type:, **kwargs)
-          client.order.place(symbol: symbol, side: side, type: type, **kwargs)
-        end
-
-        # Find an order by ID or client_order_id
-        # @example BinanceUSDM::Resources::Order.find(symbol: "ETHUSDT", order_id: 123456)
-        def find(symbol:, order_id: nil, client_order_id: nil, **kwargs)
-          client.order.find(symbol: symbol, order_id: order_id, client_order_id: client_order_id, **kwargs)
-        end
-
-        # Get open orders
-        # @example BinanceUSDM::Resources::Order.open(symbol: "ETHUSDT")
-        def open(symbol: nil, **_kwargs)
-          symbol ? client.order.open_orders(symbol: symbol) : client.order.all_open_orders
-        end
-
-        # Cancel an order
-        # @example BinanceUSDM::Resources::Order.cancel(symbol: "ETHUSDT", order_id: 123456)
-        def cancel(symbol:, order_id: nil, client_order_id: nil, **kwargs)
-          client.order.cancel(symbol: symbol, order_id: order_id, client_order_id: client_order_id, **kwargs)
-        end
-
-        # Cancel all orders for a symbol
-        # @example BinanceUSDM::Resources::Order.cancel_all(symbol: "ETHUSDT")
-        def cancel_all(symbol:, **kwargs)
-          client.order.cancel_all(symbol: symbol, **kwargs)
-        end
-
-        # Batch create orders
-        # @example BinanceUSDM::Resources::Order.batch_create([{symbol: "ETHUSDT", ...}, {symbol: "BTCUSDT", ...}])
-        def batch_create(orders_array, **kwargs)
-          client.order.batch_place(orders: orders_array, **kwargs)
-        end
-
-        # Batch cancel orders
-        # @example BinanceUSDM::Resources::Order.batch_cancel(symbol: "ETHUSDT", order_ids: [123, 456])
-        def batch_cancel(symbol:, order_ids: nil, client_order_ids: nil, **kwargs)
-          client.order.batch_cancel(symbol: symbol, order_ids: order_ids, client_order_ids: client_order_ids, **kwargs)
-        end
+    # Class-level (ActiveRecord-style) accessors for the order resource.
+    module OrderClassMethods
+      # Get the client to use (thread-local or default)
+      def client
+        Thread.current[:binance_usdm_client] || BinanceUSDM.default_client
       end
-      # Place a new order (FULL parameter support)
+
+      # Execute with a specific client
+      def using(client_instance)
+        previous = Thread.current[:binance_usdm_client]
+        Thread.current[:binance_usdm_client] = client_instance
+        yield
+      ensure
+        Thread.current[:binance_usdm_client] = previous
+      end
+
+      # Place a new order (class method)
+      # @example BinanceUSDM::Resources::Order.create(symbol: "ETHUSDT", side: :buy, type: :market, quantity: "0.1")
+      def create(symbol:, side:, type:, **kwargs)
+        client.order.place(symbol: symbol, side: side, type: type, **kwargs)
+      end
+
+      # Find an order by ID or client_order_id (class method)
+      # @example BinanceUSDM::Resources::Order.find(symbol: "ETHUSDT", order_id: 123456)
+      def find(symbol:, order_id: nil, client_order_id: nil, **kwargs)
+        client.order.find(symbol: symbol, order_id: order_id, client_order_id: client_order_id, **kwargs)
+      end
+
+      # Get open orders (class method)
+      # @example BinanceUSDM::Resources::Order.open(symbol: "ETHUSDT")
+      def open(symbol: nil, **_kwargs)
+        symbol ? client.order.open_orders(symbol: symbol) : client.order.all_open_orders
+      end
+
+      # Cancel an order (class method)
+      # @example BinanceUSDM::Resources::Order.cancel(symbol: "ETHUSDT", order_id: 123456)
+      def cancel(symbol:, order_id: nil, client_order_id: nil, **kwargs)
+        client.order.cancel(symbol: symbol, order_id: order_id, client_order_id: client_order_id, **kwargs)
+      end
+
+      # Cancel all orders for a symbol (class method)
+      # @example BinanceUSDM::Resources::Order.cancel_all(symbol: "ETHUSDT")
+      def cancel_all(symbol:, **kwargs)
+        client.order.cancel_all(symbol: symbol, **kwargs)
+      end
+
+      # Batch create orders (class method)
+      # @example BinanceUSDM::Resources::Order.batch_create([{symbol: "ETHUSDT", ...}, {symbol: "BTCUSDT", ...}])
+      def batch_create(orders_array, **kwargs)
+        client.order.batch_place(orders: orders_array, **kwargs)
+      end
+
+      # Batch cancel orders (class method)
+      # @example BinanceUSDM::Resources::Order.batch_cancel(symbol: "ETHUSDT", order_ids: [123, 456])
+      def batch_cancel(symbol:, order_ids: nil, client_order_ids: nil, **kwargs)
+        client.order.batch_cancel(symbol: symbol, order_ids: order_ids, client_order_ids: client_order_ids, **kwargs)
+      end
+    end
+
+    # Order write operations (create, modify, cancel) and shared payload builders.
+    module OrderCommands
+      # Place a new order
       # @param symbol [String] Trading symbol (e.g., "BTCUSDT")
-      # @param side [String] Order side: BUY or SELL
-      # @param type [String] Order type: LIMIT, MARKET, STOP, STOP_MARKET, TAKE_PROFIT, TAKE_PROFIT_MARKET, TRAILING_STOP_MARKET
+      # @param side [String, Symbol] Order side: BUY or SELL
+      # @param type [String, Symbol] Order type: LIMIT, MARKET, STOP, STOP_MARKET, TAKE_PROFIT,
+      #   TAKE_PROFIT_MARKET, TRAILING_STOP_MARKET
       # @param quantity [String, nil] Order quantity (not required for closePosition orders)
       # @param price [String, nil] Limit price (required for LIMIT orders)
-      # @param position_side [String, nil] Position side: BOTH, LONG, SHORT (default: BOTH for One-way Mode; required for Hedge Mode)
-      # @param time_in_force [String, nil] Time in force: GTC, IOC, FOK (default: GTC for LIMIT; not applicable to MARKET/STOP_MARKET/TAKE_PROFIT_MARKET/TRAILING_STOP_MARKET)
+      # @param position_side [String, nil] Position side: BOTH, LONG, SHORT
+      #   (default: BOTH for One-way Mode; required for Hedge Mode)
+      # @param time_in_force [String, nil] Time in force: GTC, IOC, FOK (default: GTC for LIMIT)
       # @param reduce_only [Boolean, nil] Reduce only order (default: false)
       # @param close_position [Boolean, nil] Close all open positions (default: false)
       # @param client_order_id [String, nil] Client order ID (max length 36, auto-generated if not provided)
@@ -90,85 +113,21 @@ module BinanceUSDM
       # @param new_client_order_id [String, nil] Alternative parameter for client_order_id
       # @param recv_window [Integer, nil] Receive window in milliseconds
       # @return [Models::Order] Created order
-      def place(symbol:, side:, type:, quantity: nil, price: nil, position_side: nil,
-                time_in_force: nil, reduce_only: nil, close_position: nil, client_order_id: nil,
-                response_type: nil, stop_price: nil, activation_price: nil, callback_rate: nil,
-                working_type: nil, price_protect: nil, price_match: nil,
-                self_trade_prevention_mode: nil, good_till_date: nil, new_client_order_id: nil,
-                recv_window: nil)
-        params = {
-          symbol: symbol,
-          side: side.to_s.upcase,
-          type: type.to_s.upcase
-        }
+      def place(symbol:, side:, type:, **options)
+        options[:client_order_id] ||= options.delete(:new_client_order_id)
 
-        params[:quantity] = quantity if quantity
-        params[:price] = price if price
-        params[:positionSide] = position_side.to_s.upcase if position_side
-        params[:timeInForce] = time_in_force.to_s.upcase if time_in_force
-        params[:reduceOnly] = reduce_only if reduce_only == true
-        params[:closePosition] = close_position if close_position == true
-        params[:newClientOrderId] = client_order_id || new_client_order_id if client_order_id || new_client_order_id
-        params[:newOrderRespType] = response_type.to_s.upcase if response_type
-        params[:stopPrice] = stop_price if stop_price
-        params[:activationPrice] = activation_price if activation_price
-        params[:callbackRate] = callback_rate if callback_rate
-        params[:workingType] = working_type.to_s.upcase if working_type
-        params[:priceProtect] = price_protect if price_protect == true
-        params[:priceMatch] = price_match.to_s.upcase if price_match
-        params[:selfTradePreventionMode] = self_trade_prevention_mode.to_s.upcase if self_trade_prevention_mode
-        params[:goodTillDate] = good_till_date if good_till_date
-        params[:recvWindow] = recv_window if recv_window
-
-        response = post('/fapi/v1/order', params: params)
+        response = post('/fapi/v1/order', params: order_payload(symbol: symbol, side: side, type: type, **options))
         Models::Order.new(response)
       end
 
       # Test order creation (signature checked but order not sent to matching engine)
       # @param symbol [String] Trading symbol
-      # @param side [String] Order side: BUY or SELL
-      # @param type [String] Order type
-      # @param quantity [String, nil] Order quantity
-      # @param price [String, nil] Limit price
-      # @param position_side [String, nil] Position side
-      # @param time_in_force [String, nil] Time in force
-      # @param reduce_only [Boolean, nil] Reduce only order
-      # @param close_position [Boolean, nil] Close all open positions
-      # @param client_order_id [String, nil] Client order ID
-      # @param response_type [String, nil] Response type
-      # @param stop_price [String, nil] Stop price
-      # @param activation_price [String, nil] Activation price
-      # @param callback_rate [String, nil] Callback rate
-      # @param working_type [String, nil] Working type
-      # @param price_protect [Boolean, nil] Price protect
-      # @param recv_window [Integer, nil] Receive window
+      # @param side [String, Symbol] Order side
+      # @param type [String, Symbol] Order type
+      # @param options [Hash] Any order parameters (see OrderCommands#place)
       # @return [Hash] Empty response if successful
-      def test(symbol:, side:, type:, quantity: nil, price: nil, position_side: nil,
-               time_in_force: nil, reduce_only: nil, close_position: nil, client_order_id: nil,
-               response_type: nil, stop_price: nil, activation_price: nil, callback_rate: nil,
-               working_type: nil, price_protect: nil, recv_window: nil)
-        params = {
-          symbol: symbol,
-          side: side.to_s.upcase,
-          type: type.to_s.upcase
-        }
-
-        params[:quantity] = quantity if quantity
-        params[:price] = price if price
-        params[:positionSide] = position_side.to_s.upcase if position_side
-        params[:timeInForce] = time_in_force.to_s.upcase if time_in_force
-        params[:reduceOnly] = reduce_only if reduce_only == true
-        params[:closePosition] = close_position if close_position == true
-        params[:newClientOrderId] = client_order_id if client_order_id
-        params[:newOrderRespType] = response_type.to_s.upcase if response_type
-        params[:stopPrice] = stop_price if stop_price
-        params[:activationPrice] = activation_price if activation_price
-        params[:callbackRate] = callback_rate if callback_rate
-        params[:workingType] = working_type.to_s.upcase if working_type
-        params[:priceProtect] = price_protect if price_protect == true
-        params[:recvWindow] = recv_window if recv_window
-
-        post('/fapi/v1/order/test', params: params)
+      def test(symbol:, side:, type:, **options)
+        post('/fapi/v1/order/test', params: order_payload(symbol: symbol, side: side, type: type, **options))
       end
 
       # Modify an existing order
@@ -182,44 +141,17 @@ module BinanceUSDM
       # @param client_order_id_new [String, nil] New client order ID for the modified order
       # @param recv_window [Integer, nil] Receive window
       # @return [Models::Order] Modified order
-      def modify(symbol:, order_id: nil, client_order_id: nil, orig_client_order_id: nil, side: nil,
+      def modify(symbol:, order_id: nil, client_order_id: nil, orig_client_order_id: nil, side: nil, # rubocop:disable Metrics/ParameterLists
                  quantity: nil, price: nil, client_order_id_new: nil, recv_window: nil)
-        client_oid = orig_client_order_id || client_order_id
-        raise ArgumentError, 'Either order_id or client_order_id must be provided' unless order_id || client_oid
-
-        params = { symbol: symbol }
-        params[:orderId] = order_id if order_id
-        params[:origClientOrderId] = client_oid if client_oid
+        params = order_ref_params(symbol,
+                                  order_id: order_id, client_order_id: orig_client_order_id || client_order_id,
+                                  recv_window: recv_window)
         params[:side] = side.to_s.upcase if side
         params[:quantity] = quantity if quantity
         params[:price] = price if price
         params[:newClientOrderId] = client_order_id_new if client_order_id_new
-        params[:recvWindow] = recv_window if recv_window
 
-        response = put('/fapi/v1/order', params: params)
-        Models::Order.new(response)
-      end
-
-      # Get order modification history
-      # @param symbol [String] Trading symbol
-      # @param order_id [Integer, nil] Order ID
-      # @param client_order_id [String, nil] Client order ID
-      # @param start_time [Integer, nil] Start time in ms
-      # @param end_time [Integer, nil] End time in ms
-      # @param limit [Integer] Number of results (default: 500, max: 1000)
-      # @return [Array<Hash>] Order modification history
-      def modify_history(symbol:, order_id: nil, client_order_id: nil, start_time: nil, end_time: nil, limit: 500)
-        params = {
-          symbol: symbol,
-          limit: limit
-        }
-
-        params[:orderId] = order_id if order_id
-        params[:origClientOrderId] = client_order_id if client_order_id
-        params[:startTime] = start_time if start_time
-        params[:endTime] = end_time if end_time
-
-        get('/fapi/v1/orderModifyHistory', params: params)
+        Models::Order.new(put('/fapi/v1/order', params: params))
       end
 
       # Cancel an active order
@@ -230,13 +162,9 @@ module BinanceUSDM
       # @param recv_window [Integer, nil] Receive window
       # @return [Models::Order] Canceled order
       def cancel(symbol:, order_id: nil, client_order_id: nil, orig_client_order_id: nil, recv_window: nil)
-        client_oid = orig_client_order_id || client_order_id
-        raise ArgumentError, 'Either order_id or client_order_id must be provided' unless order_id || client_oid
-
-        params = { symbol: symbol }
-        params[:orderId] = order_id if order_id
-        params[:origClientOrderId] = client_oid if client_oid
-        params[:recvWindow] = recv_window if recv_window
+        params = order_ref_params(symbol,
+                                  order_id: order_id, client_order_id: orig_client_order_id || client_order_id,
+                                  recv_window: recv_window)
 
         response = delete('/fapi/v1/order', params: params)
         Models::Order.new(response)
@@ -279,12 +207,83 @@ module BinanceUSDM
       # @param countdown_time [Integer] Countdown time in milliseconds (0 to cancel)
       # @return [Hash] Response with countdown time
       def countdown_cancel_all(symbol:, countdown_time:)
-        post('/fapi/v1/countdownCancelAll', params: {
-               symbol: symbol,
-               countdownTime: countdown_time
-             })
+        post('/fapi/v1/countdownCancelAll', params: { symbol: symbol, countdownTime: countdown_time })
       end
 
+      # Place multiple orders in batch
+      # @param orders [Array<Hash>] Array of order parameters
+      #   Each order hash should contain: symbol, side, type, and other order parameters
+      # @param recv_window [Integer, nil] Receive window
+      # @return [Array<Models::Order>] Array of created orders
+      def batch_place(orders:, recv_window: nil)
+        params = { batchOrders: JSON.dump(batch_order_payload(orders)) }
+        params[:recvWindow] = recv_window if recv_window
+
+        response = post('/fapi/v1/batchOrders', params: params)
+        response.map { |order_data| Models::Order.new(order_data) }
+      end
+
+      # Modify multiple orders in batch
+      # @param orders [Array<Hash>] Array of order modification parameters
+      #   Each order hash should contain: symbol, and either order_id or client_order_id
+      # @param recv_window [Integer, nil] Receive window
+      # @return [Array<Models::Order>] Array of modified orders
+      def batch_modify(orders:, recv_window: nil)
+        params = { batchOrders: JSON.dump(batch_modify_payload(orders)) }
+        params[:recvWindow] = recv_window if recv_window
+
+        response = put('/fapi/v1/batchOrders', params: params)
+        response.map { |order_data| Models::Order.new(order_data) }
+      end
+
+      private
+
+      def order_payload(symbol:, side:, type:, **options)
+        unknown = options.keys - ORDER_OPTIONS.keys
+        raise ArgumentError, "Unknown order option(s): #{unknown.join(', ')}" if unknown.any?
+
+        params = { symbol: symbol, side: side.to_s.upcase, type: type.to_s.upcase }
+        options.each { |key, value| add_order_param(params, key, value) }
+        params
+      end
+
+      def add_order_param(params, key, value)
+        return unless value
+
+        rule = ORDER_OPTIONS[key]
+        params[rule[:param]] = rule[:enum] ? value.to_s.upcase : value
+      end
+
+      def order_ref_params(symbol, order_id: nil, client_order_id: nil, recv_window: nil)
+        raise ArgumentError, 'Either order_id or client_order_id must be provided' unless order_id || client_order_id
+
+        params = { symbol: symbol }
+        params[:orderId] = order_id if order_id
+        params[:origClientOrderId] = client_order_id if client_order_id
+        params[:recvWindow] = recv_window if recv_window
+        params
+      end
+
+      def batch_order_payload(orders)
+        orders.map { |order| order_payload(**order) }
+      end
+
+      def batch_modify_payload(orders)
+        orders.map do |order|
+          {
+            symbol: order[:symbol],
+            orderId: order[:order_id],
+            origClientOrderId: order[:client_order_id],
+            quantity: order[:quantity],
+            price: order[:price],
+            newClientOrderId: order[:client_order_id_new]
+          }.compact
+        end
+      end
+    end
+
+    # Order read operations (queries and order history).
+    module OrderQueries
       # Get order details
       # @param symbol [String] Trading symbol
       # @param order_id [Integer, nil] Order ID
@@ -293,13 +292,9 @@ module BinanceUSDM
       # @param recv_window [Integer, nil] Receive window
       # @return [Models::Order] Order details
       def find(symbol:, order_id: nil, client_order_id: nil, orig_client_order_id: nil, recv_window: nil)
-        client_oid = orig_client_order_id || client_order_id
-        raise ArgumentError, 'Either order_id or client_order_id must be provided' unless order_id || client_oid
-
-        params = { symbol: symbol }
-        params[:orderId] = order_id if order_id
-        params[:origClientOrderId] = client_oid if client_oid
-        params[:recvWindow] = recv_window if recv_window
+        params = order_ref_params(symbol,
+                                  order_id: order_id, client_order_id: orig_client_order_id || client_order_id,
+                                  recv_window: recv_window)
 
         response = get('/fapi/v1/order', params: params)
         Models::Order.new(response)
@@ -311,11 +306,7 @@ module BinanceUSDM
       # @param client_order_id [String, nil] Client order ID
       # @return [Models::Order] Open order details
       def open_order(symbol:, order_id: nil, client_order_id: nil)
-        raise ArgumentError, 'Either order_id or client_order_id must be provided' unless order_id || client_order_id
-
-        params = { symbol: symbol }
-        params[:orderId] = order_id if order_id
-        params[:origClientOrderId] = client_order_id if client_order_id
+        params = order_ref_params(symbol, order_id: order_id, client_order_id: client_order_id)
 
         response = get('/fapi/v1/openOrder', params: params)
         Models::Order.new(response)
@@ -347,11 +338,7 @@ module BinanceUSDM
       # @param end_time [Integer, nil] End time in ms
       # @return [Array<Models::Order>] Orders
       def all_orders(symbol:, order_id: nil, limit: 500, start_time: nil, end_time: nil)
-        params = {
-          symbol: symbol,
-          limit: limit
-        }
-
+        params = { symbol: symbol, limit: limit }
         params[:orderId] = order_id if order_id
         params[:startTime] = start_time if start_time
         params[:endTime] = end_time if end_time
@@ -369,11 +356,7 @@ module BinanceUSDM
       # @param end_time [Integer, nil] End time in ms
       # @return [Array<Models::Trade>] Trades
       def trades(symbol:, trade_id: nil, order_id: nil, limit: 500, start_time: nil, end_time: nil)
-        params = {
-          symbol: symbol,
-          limit: limit
-        }
-
+        params = { symbol: symbol, limit: limit }
         params[:tradeId] = trade_id if trade_id
         params[:orderId] = order_id if order_id
         params[:startTime] = start_time if start_time
@@ -383,65 +366,32 @@ module BinanceUSDM
         response.map { |trade_data| Models::Trade.new(trade_data) }
       end
 
-      # Place multiple orders in batch
-      # @param orders [Array<Hash>] Array of order parameters
-      #   Each order hash should contain: symbol, side, type, and other order parameters
-      # @param recv_window [Integer, nil] Receive window
-      # @return [Array<Models::Order>] Array of created orders
-      def batch_place(orders:, recv_window: nil)
-        formatted_orders = orders.map do |order|
-          {
-            symbol: order[:symbol],
-            side: order[:side].to_s.upcase,
-            type: order[:type].to_s.upcase,
-            quantity: order[:quantity],
-            price: order[:price],
-            positionSide: order[:position_side],
-            timeInForce: order[:time_in_force],
-            reduceOnly: order[:reduce_only],
-            newClientOrderId: order[:client_order_id],
-            stopPrice: order[:stop_price],
-            activationPrice: order[:activation_price],
-            callbackRate: order[:callback_rate],
-            workingType: order[:working_type],
-            priceProtect: order[:price_protect]
-          }.compact
-        end
+      # Get order modification history
+      # @param symbol [String] Trading symbol
+      # @param order_id [Integer, nil] Order ID
+      # @param client_order_id [String, nil] Client order ID
+      # @param start_time [Integer, nil] Start time in ms
+      # @param end_time [Integer, nil] End time in ms
+      # @param limit [Integer] Number of results (default: 500, max: 1000)
+      # @return [Array<Hash>] Order modification history
+      def modify_history(symbol:, order_id: nil, client_order_id: nil, start_time: nil, end_time: nil, limit: 500)
+        params = { symbol: symbol, limit: limit }
+        params[:orderId] = order_id if order_id
+        params[:origClientOrderId] = client_order_id if client_order_id
+        params[:startTime] = start_time if start_time
+        params[:endTime] = end_time if end_time
 
-        params = {
-          batchOrders: JSON.dump(formatted_orders)
-        }
-        params[:recvWindow] = recv_window if recv_window
-
-        response = post('/fapi/v1/batchOrders', params: params)
-        response.map { |order_data| Models::Order.new(order_data) }
+        get('/fapi/v1/orderModifyHistory', params: params)
       end
+    end
 
-      # Modify multiple orders in batch
-      # @param orders [Array<Hash>] Array of order modification parameters
-      #   Each order hash should contain: symbol, and either order_id or client_order_id
-      # @param recv_window [Integer, nil] Receive window
-      # @return [Array<Models::Order>] Array of modified orders
-      def batch_modify(orders:, recv_window: nil)
-        formatted_orders = orders.map do |order|
-          {
-            symbol: order[:symbol],
-            orderId: order[:order_id],
-            origClientOrderId: order[:client_order_id],
-            quantity: order[:quantity],
-            price: order[:price],
-            newClientOrderId: order[:client_order_id_new]
-          }.compact
-        end
-
-        params = {
-          batchOrders: JSON.dump(formatted_orders)
-        }
-        params[:recvWindow] = recv_window if recv_window
-
-        response = put('/fapi/v1/batchOrders', params: params)
-        response.map { |order_data| Models::Order.new(order_data) }
-      end
+    # Order resource for managing futures orders.
+    # Implements all Binance USDⓈ-M Futures order endpoints.
+    # Supports both instance methods (via client) and class methods (via default_client).
+    class Order < BaseAPI
+      extend OrderClassMethods
+      include OrderCommands
+      include OrderQueries
     end
   end
 end

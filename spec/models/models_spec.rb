@@ -163,10 +163,10 @@ RSpec.describe BinanceUSDM::Models do
       end
     end
 
-    describe '#has_position?' do
+    describe '#position?' do
       context 'when position amount is non-zero' do
         it 'returns true' do
-          expect(position.has_position?).to be(true)
+          expect(position.position?).to be(true)
         end
       end
 
@@ -174,7 +174,7 @@ RSpec.describe BinanceUSDM::Models do
         let(:position_data) { super().merge('positionAmt' => '0.000') }
 
         it 'returns false' do
-          expect(position.has_position?).to be(false)
+          expect(position.position?).to be(false)
         end
       end
     end
