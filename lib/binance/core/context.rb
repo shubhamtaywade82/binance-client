@@ -25,7 +25,7 @@ module Binance
         @rate_limiter = rate_limiter || RateLimit::Manager.new
         @transport = transport || Transport::HTTP.new(
           base_url: base_url_for(environment),
-          api_key: credentials.api_key,
+          api_key: credentials&.api_key,
           secret_key: extract_secret(credentials),
           timeout: 30,
           logger: logger
