@@ -25,11 +25,9 @@ module BinanceUSDM
       def consume(amount = 1, key: :default)
         @mutex.synchronize do
           counter = get_or_create_counter(key)
-          
-          if counter[:current] + amount > limit
-            return false
-          end
-          
+
+          return false if counter[:current] + amount > limit
+
           counter[:current] += amount
           counter[:last_update] = Time.now
           true
@@ -88,12 +86,10 @@ module BinanceUSDM
       # @return [Hash] Counter hash
       def get_or_create_counter(key)
         counters[key] ||= { current: 0, last_update: Time.now }
-        
+
         # Auto-reset if interval passed
-        if Time.now - counters[key][:last_update] > interval
-          counters[key] = { current: 0, last_update: Time.now }
-        end
-        
+        counters[key] = { current: 0, last_update: Time.now } if Time.now - counters[key][:last_update] > interval
+
         counters[key]
       end
     end

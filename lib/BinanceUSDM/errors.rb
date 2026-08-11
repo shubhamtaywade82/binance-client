@@ -8,15 +8,16 @@ module BinanceUSDM
   class BinanceError < Error
     attr_reader :code, :message, :http_status, :headers, :endpoint, :request_id, :retry_after
 
-    def initialize(message = nil, code: nil, http_status: nil, headers: nil, endpoint: nil, request_id: nil, retry_after: nil, **kwargs)
-      msg = message.is_a?(String) ? message : (kwargs[:message] || "Binance API Error")
+    def initialize(message = nil, code: nil, http_status: nil, headers: nil, endpoint: nil, request_id: nil,
+                   retry_after: nil, **kwargs)
+      msg = message.is_a?(String) ? message : (kwargs[:message] || 'Binance API Error')
       @code = code || (message.is_a?(Numeric) ? message : kwargs[:code])
       @message = msg
       @http_status = http_status || kwargs[:http_status]
       @headers = (headers || kwargs[:headers] || {}).transform_keys(&:downcase)
       @endpoint = endpoint || kwargs[:endpoint]
-      @request_id = request_id || kwargs[:request_id] || @headers["x-mbx-request-id"]
-      @retry_after = retry_after || kwargs[:retry_after] || @headers["retry-after"]&.to_i
+      @request_id = request_id || kwargs[:request_id] || @headers['x-mbx-request-id']
+      @retry_after = retry_after || kwargs[:retry_after] || @headers['retry-after']&.to_i
       super(msg)
     end
 

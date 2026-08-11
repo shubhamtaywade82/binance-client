@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "time"
+require 'time'
 
 module BinanceUSDM
   module Authentication
@@ -50,7 +50,7 @@ module BinanceUSDM
       # @return [Boolean]
       def sync_needed?
         return true if last_sync_time.nil?
-        
+
         Time.now - last_sync_time > sync_interval
       end
 
@@ -58,7 +58,7 @@ module BinanceUSDM
       # @yieldreturn [Integer] Server timestamp in ms
       def auto_sync(&block)
         return unless sync_needed?
-        
+
         sync_with(&block)
       end
 
@@ -73,7 +73,7 @@ module BinanceUSDM
       # Get human-readable offset
       # @return [String] Offset in milliseconds
       def offset_str
-        "#{time_offset > 0 ? '+' : ''}#{time_offset}ms"
+        "#{time_offset.positive? ? '+' : ''}#{time_offset}ms"
       end
     end
   end

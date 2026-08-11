@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require_relative "../core/base_api"
-require_relative "../models"
+require_relative '../core/base_api'
+require_relative '../models'
 
 module BinanceUSDM
   module Resources
@@ -26,8 +26,7 @@ module BinanceUSDM
       # @param price_protect [Boolean, nil] Price protect trigger condition (default: false)
       # @param recv_window [Integer, nil] Receive window in milliseconds
       # @return [Hash] Created algo order details
-      def create(symbol:, side:, algo_type:, quantity:, position_side: nil, price: nil,
-                 stop_price:, working_type: nil, time_in_force: nil, client_order_id: nil,
+      def create(symbol:, side:, algo_type:, quantity:, stop_price:, position_side: nil, price: nil, working_type: nil, time_in_force: nil, client_order_id: nil,
                  reduce_only: nil, close_position: nil, activation_price: nil,
                  callback_rate: nil, price_protect: nil, recv_window: nil)
         params = {
@@ -37,7 +36,7 @@ module BinanceUSDM
           quantity: quantity,
           stopPrice: stop_price
         }
-        
+
         params[:positionSide] = position_side.to_s.upcase if position_side
         params[:price] = price if price
         params[:workingType] = working_type.to_s.upcase if working_type
@@ -49,10 +48,10 @@ module BinanceUSDM
         params[:callbackRate] = callback_rate if callback_rate
         params[:priceProtect] = price_protect if price_protect == true
         params[:recvWindow] = recv_window if recv_window
-        
-        post("/fapi/v1/algoOrder", params: params)
+
+        post('/fapi/v1/algoOrder', params: params)
       end
-      
+
       # Cancel an algo order
       # @param symbol [String] Trading symbol
       # @param algo_id [Integer] Algo order ID
@@ -64,10 +63,10 @@ module BinanceUSDM
           algoId: algo_id
         }
         params[:recvWindow] = recv_window if recv_window
-        
-        delete("/fapi/v1/algoOrder", params: params)
+
+        delete('/fapi/v1/algoOrder', params: params)
       end
-      
+
       # Get algo order details
       # @param symbol [String] Trading symbol
       # @param algo_id [Integer] Algo order ID
@@ -79,10 +78,10 @@ module BinanceUSDM
           algoId: algo_id
         }
         params[:recvWindow] = recv_window if recv_window
-        
-        get("/fapi/v1/algoOrder", params: params)
+
+        get('/fapi/v1/algoOrder', params: params)
       end
-      
+
       # Get all open algo orders
       # @param symbol [String, nil] Trading symbol (optional, all symbols if not provided)
       # @param page [Integer, nil] Page number (default: 1)
@@ -95,10 +94,10 @@ module BinanceUSDM
         params[:page] = page if page
         params[:limit] = limit if limit
         params[:recvWindow] = recv_window if recv_window
-        
-        get("/fapi/v1/algoOpenOrders", params: params)
+
+        get('/fapi/v1/algoOpenOrders', params: params)
       end
-      
+
       # Get all algo orders (including historical)
       # @param symbol [String, nil] Trading symbol
       # @param algo_type [String, nil] Algo order type filter: STOP_LOSS, TAKE_PROFIT
@@ -120,10 +119,10 @@ module BinanceUSDM
         params[:page] = page if page
         params[:limit] = limit if limit
         params[:recvWindow] = recv_window if recv_window
-        
-        get("/fapi/v1/algoSubOrders", params: params)
+
+        get('/fapi/v1/algoSubOrders', params: params)
       end
-      
+
       # Cancel all open algo orders for a symbol
       # @param symbol [String] Trading symbol
       # @param recv_window [Integer, nil] Receive window
@@ -133,8 +132,8 @@ module BinanceUSDM
           symbol: symbol
         }
         params[:recvWindow] = recv_window if recv_window
-        
-        delete("/fapi/v1/algoOpenOrders", params: params)
+
+        delete('/fapi/v1/algoOpenOrders', params: params)
       end
     end
   end

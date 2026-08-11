@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require "faraday"
-require "json"
-require_relative "request"
-require_relative "response"
-require_relative "../helpers/signature_helper"
+require 'faraday'
+require 'json'
+require_relative 'request'
+require_relative 'response'
+require_relative '../helpers/signature_helper'
 
 module BinanceUSDM
   module Transport
@@ -32,7 +32,7 @@ module BinanceUSDM
         log_request(request, url, headers)
 
         response = connection.run_request(request.method, url, body, headers)
-        
+
         Response.new(
           status: response.status,
           body: parse_body(response.body),
@@ -77,7 +77,7 @@ module BinanceUSDM
           recv_window: params.delete(:recv_window) || params.delete(:recvWindow) || 5000
         )
 
-        if [:get, :delete].include?(request.method) || request.encoding == :query
+        if %i[get delete].include?(request.method) || request.encoding == :query
           ["#{path_url}?#{signed_query}", nil]
         else
           [path_url, signed_query]
@@ -88,7 +88,7 @@ module BinanceUSDM
         formatted = SignatureHelper.format_params(request.params)
         return [path_url, nil] if formatted.empty?
 
-        if [:get, :delete].include?(request.method)
+        if %i[get delete].include?(request.method)
           query = URI.encode_www_form(formatted)
           ["#{path_url}?#{query}", nil]
         else
@@ -98,44 +98,45 @@ module BinanceUSDM
       end
 
       def build_headers(request)
-        headers = { "Content-Type" => content_type(request) }
-        headers["X-MBX-APIKEY"] = api_key if api_key && (request.needs_api_key? || request.signed?)
+        headers = { 'Content-Type' => content_type(request) }
+        headers['X-MBX-APIKEY'] = api_key if api_key && (request.needs_api_key? || request.signed?)
         headers
       end
 
       def content_type(request)
         case request.encoding
-        when :json then "application/json"
-        when :form then "application/x-www-form-urlencoded"
-        else "application/x-www-form-urlencoded"
+        when :json then 'application/json'
+        when :form then 'application/x-www-form-urlencoded'
+        else 'application/x-www-form-urlencoded'
         end
       end
 
       def parse_body(body)
         return {} if body.nil? || body.empty?
+
         JSON.parse(body)
       rescue JSON::ParserError => e
         logger.error("Failed to parse response: #{e.message}")
         raise ApiError.new(message: "Invalid JSON response: #{e.message}", code: -1)
       end
 
-      def log_request(request, url, headers)
+      def log_request(request, _url, _headers)
         return unless logger.debug?
-        
+
         safe_params = sanitize_params(request.params)
         logger.debug("[REQUEST] #{request.method_str} #{request.path} params=#{safe_params.inspect}")
       end
 
       def sanitize_params(params)
         params.dup.tap do |p|
-          p[:apiKey] = "***REDACTED***" if p.key?(:apiKey)
-          p[:signature] = "***REDACTED***" if p.key?(:signature)
+          p[:apiKey] = '***REDACTED***' if p.key?(:apiKey)
+          p[:signature] = '***REDACTED***' if p.key?(:signature)
         end
       end
 
       def default_logger
         Logger.new($stdout).tap do |log|
-          log.level = ENV.fetch("BINANCE_LOG_LEVEL", "WARN").to_sym
+          log.level = ENV.fetch('BINANCE_LOG_LEVEL', 'WARN').to_sym
         end
       end
     end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "bucket"
+require_relative 'bucket'
 
 module BinanceUSDM
   module RateLimit
@@ -21,7 +21,7 @@ module BinanceUSDM
       # @param limits [Hash] Custom limits (optional, uses defaults if not provided)
       def initialize(limits: nil)
         limits ||= DEFAULT_LIMITS
-        
+
         @buckets = {
           request_weight: Bucket.new(
             name: :request_weight,
@@ -44,7 +44,7 @@ module BinanceUSDM
             interval: 1
           )
         }
-        
+
         @mutex = Mutex.new
       end
 
@@ -54,23 +54,21 @@ module BinanceUSDM
       def allow?(endpoint_spec)
         @mutex.synchronize do
           metadata = endpoint_spec.metadata
-          
+
           # Check request weight
           weight = metadata[:weight] || 1
           return false unless buckets[:request_weight].consume(weight)
-          
+
           # Check order count limits
-          if metadata[:order_count_10s] > 0
-            return false unless buckets[:orders_10s].consume(metadata[:order_count_10s])
+          if metadata[:order_count_10s].positive? && !buckets[:orders_10s].consume(metadata[:order_count_10s])
+            return false
           end
-          
-          if metadata[:order_count_1m] > 0
-            return false unless buckets[:orders_1m].consume(metadata[:order_count_1m])
-          end
-          
+
+          return false if metadata[:order_count_1m].positive? && !buckets[:orders_1m].consume(metadata[:order_count_1m])
+
           # Check raw request rate
           return false unless buckets[:raw_requests].consume(1)
-          
+
           true
         end
       end
@@ -81,15 +79,13 @@ module BinanceUSDM
       # @raise [RateLimitError] if max_wait exceeded
       def wait_until_allowed(endpoint_spec, max_wait: 60)
         start_time = Time.now
-        
+
         loop do
           return if allow?(endpoint_spec)
-          
+
           elapsed = Time.now - start_time
-          if elapsed > max_wait
-            raise Errors::RateLimitError, "Rate limit wait exceeded #{max_wait}s"
-          end
-          
+          raise Errors::RateLimitError, "Rate limit wait exceeded #{max_wait}s" if elapsed > max_wait
+
           sleep(0.1)
         end
       end
@@ -117,25 +113,25 @@ module BinanceUSDM
       # @param headers [Hash] Response headers
       def update_from_headers(headers)
         headers = headers.transform_keys(&:downcase)
-        
-        if headers["x-mbx-used-weight-1m"]
-          used = headers["x-mbx-used-weight-1m"].to_i
+
+        if headers['x-mbx-used-weight-1m']
+          used = headers['x-mbx-used-weight-1m'].to_i
           # Adjust bucket based on actual usage
           buckets[:request_weight].reset
           buckets[:request_weight].consume(used)
         end
-        
-        if headers["x-mbx-order-count-10s"]
-          used = headers["x-mbx-order-count-10s"].to_i
+
+        if headers['x-mbx-order-count-10s']
+          used = headers['x-mbx-order-count-10s'].to_i
           buckets[:orders_10s].reset
           buckets[:orders_10s].consume(used)
         end
-        
-        if headers["x-mbx-order-count-1m"]
-          used = headers["x-mbx-order-count-1m"].to_i
-          buckets[:orders_1m].reset
-          buckets[:orders_1m].consume(used)
-        end
+
+        return unless headers['x-mbx-order-count-1m']
+
+        used = headers['x-mbx-order-count-1m'].to_i
+        buckets[:orders_1m].reset
+        buckets[:orders_1m].consume(used)
       end
 
       # Reset all buckets

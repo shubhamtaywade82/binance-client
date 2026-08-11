@@ -14,7 +14,7 @@ module BinanceUSDM
         @status = status
         @body = body
         @headers = (headers || {}).transform_keys(&:downcase)
-        @request_id = headers["X-MBX-REQUEST-ID"] || headers["x-mbx-request-id"]
+        @request_id = headers['X-MBX-REQUEST-ID'] || headers['x-mbx-request-id']
         @rate_limits = extract_rate_limits
       end
 
@@ -22,10 +22,10 @@ module BinanceUSDM
       # @return [Hash] Rate limit data
       def extract_rate_limits
         {
-          request_weight_1m: headers["x-mbx-used-weight-1m"]&.to_i,
-          order_count_10s: headers["x-mbx-order-count-10s"]&.to_i,
-          order_count_1m: headers["x-mbx-order-count-1m"]&.to_i,
-          retry_after: headers["retry-after"]&.to_i
+          request_weight_1m: headers['x-mbx-used-weight-1m']&.to_i,
+          order_count_10s: headers['x-mbx-order-count-10s']&.to_i,
+          order_count_1m: headers['x-mbx-order-count-1m']&.to_i,
+          retry_after: headers['retry-after']&.to_i
         }.compact
       end
 
@@ -38,7 +38,7 @@ module BinanceUSDM
       # Get server time from headers if available
       # @return [Integer, nil] Server timestamp in ms
       def server_time
-        headers["x-mbx-used-weight-1m"] ? Time.now.to_i * 1000 : nil
+        headers['x-mbx-used-weight-1m'] ? Time.now.to_i * 1000 : nil
       end
     end
   end

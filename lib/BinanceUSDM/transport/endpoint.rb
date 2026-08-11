@@ -45,7 +45,7 @@ module BinanceUSDM
       # Check if endpoint consumes order limits
       # @return [Boolean]
       def consumes_order_limits?
-        metadata[:order_count_10s] > 0 || metadata[:order_count_1m] > 0
+        metadata[:order_count_10s].positive? || metadata[:order_count_1m].positive?
       end
     end
   end

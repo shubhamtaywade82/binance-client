@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "core/base_model"
+require_relative 'core/base_model'
 
 module BinanceUSDM
   module Models
@@ -36,28 +36,28 @@ module BinanceUSDM
       #   @return [Integer] Last update time
       # @!attribute [r] time
       #   @return [Integer] Order creation time
-      
+
       def status?
         %w[FILLED].include?(status)
       end
-      
+
       def partially_filled?
         %w[PARTIALLY_FILLED].include?(status)
       end
-      
+
       def canceled?
         %w[CANCELED REJECTED EXPIRED].include?(status)
       end
-      
+
       def active?
         %w[NEW PARTIALLY_FILLED].include?(status)
       end
 
       def filled?
-        status == "FILLED"
+        status == 'FILLED'
       end
     end
-    
+
     # Position model representing a futures position.
     class Position < BaseModel
       def leverage
@@ -65,39 +65,39 @@ module BinanceUSDM
       end
 
       def long?
-        position_side == "LONG" || (position_side == "BOTH" && position_amt.to_f > 0)
+        position_side == 'LONG' || (position_side == 'BOTH' && position_amt.to_f.positive?)
       end
-      
+
       def short?
-        position_side == "SHORT" || (position_side == "BOTH" && position_amt.to_f < 0)
+        position_side == 'SHORT' || (position_side == 'BOTH' && position_amt.to_f.negative?)
       end
-      
+
       def has_position?
         position_amt.to_f != 0
       end
-      
+
       def profit?
-        unrealized_profit.to_f > 0
+        unrealized_profit.to_f.positive?
       end
     end
-    
+
     # Account model representing account information.
     class Account < BaseModel
       def total_unrealized_pnl
         @total_unrealized_pnl || @total_unrealized_profit || @totalUnrealizedProfit
       end
-      
+
       def equity
         (total_wallet_balance.to_f + total_unrealized_pnl.to_f).to_s
       end
-      
+
       def margin_ratio
-        return "0" if total_margin_balance.to_f == 0
-        
-        ((total_position_initial_margin.to_f / total_margin_balance.to_f) * 100).round(2).to_s
+        return '0' if total_margin_balance.to_f.zero?
+
+        ((total_position_initial_margin.to_f / total_margin_balance) * 100).round(2).to_s
       end
     end
-    
+
     # Trade model representing a filled trade.
     class Trade < BaseModel
       # @!attribute [r] id
@@ -123,7 +123,7 @@ module BinanceUSDM
       # @!attribute [r] maker
       #   @return [Boolean] Is maker
     end
-    
+
     # Ticker model representing 24hr ticker statistics.
     class Ticker < BaseModel
       # @!attribute [r] symbol
@@ -147,7 +147,7 @@ module BinanceUSDM
       # @!attribute [r] count
       #   @return [Integer] Trade count
     end
-    
+
     # Balance model representing asset balance.
     class Balance < BaseModel
       # @!attribute [r] asset

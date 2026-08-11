@@ -25,13 +25,13 @@ module BinanceUSDM
       # Check if request requires signature
       # @return [Boolean]
       def signed?
-        [:trade, :user_data].include?(security)
+        %i[trade user_data].include?(security)
       end
 
       # Check if request needs API key header
       # @return [Boolean]
       def needs_api_key?
-        [:trade, :user_data, :market].include?(security)
+        %i[trade user_data market].include?(security)
       end
 
       # Get HTTP method as string
