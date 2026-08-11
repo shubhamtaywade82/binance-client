@@ -34,3 +34,4 @@ doc/
 .rubocop.yml
 .yardopts
 ```
+.rspec_status
