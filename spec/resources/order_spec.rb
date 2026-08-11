@@ -200,6 +200,20 @@ RSpec.describe Binance::USDM::Resources::Order do
     end
   end
 
+  describe '#modify_history' do
+    it 'hits the orderAmendment endpoint' do
+      stub_request(:get, %r{#{base_url}/fapi/v1/orderAmendment})
+        .to_return(
+          status: 200,
+          body: [{ 'amendmentId' => 1, 'symbol' => 'BTCUSDT', 'orderId' => 12_345 }].to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      result = order_resource.modify_history(symbol: 'BTCUSDT', order_id: 12_345)
+      expect(result.first['amendmentId']).to eq(1)
+    end
+  end
+
   describe 'validation' do
     it 'raises ArgumentError when neither order_id nor orig_client_order_id is provided to find' do
       expect do

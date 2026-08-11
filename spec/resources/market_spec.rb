@@ -125,22 +125,6 @@ RSpec.describe Binance::USDM::Resources::Market do
     end
   end
 
-  describe '#avg_price' do
-    it 'returns average price for symbol' do
-      stub_request(:get, %r{#{base_url}/fapi/v1/avgPrice})
-        .to_return(
-          status: 200,
-          body: { 'symbol' => 'BTCUSDT', 'price' => '50000.00', 'mins' => 5 }.to_json,
-          headers: { 'Content-Type' => 'application/json' }
-        )
-
-      result = market.avg_price(symbol: 'BTCUSDT')
-      expect(result['symbol']).to eq('BTCUSDT')
-      expect(result['price']).to eq('50000.00')
-      expect(result['mins']).to eq(5)
-    end
-  end
-
   describe '#exchange_info' do
     it 'returns exchange information' do
       stub_request(:get, %r{#{base_url}/fapi/v1/exchangeInfo})
@@ -202,6 +186,20 @@ RSpec.describe Binance::USDM::Resources::Market do
       result = market.funding_rate_history(symbol: 'BTCUSDT', limit: 5)
       expect(result).to be_an(Array)
       expect(result.first['fundingRate']).to eq('0.0001')
+    end
+  end
+
+  describe '#taker_long_short_volume' do
+    it 'hits the case-sensitive takerlongshortRatio endpoint' do
+      stub_request(:get, %r{#{base_url}/futures/data/takerlongshortRatio})
+        .to_return(
+          status: 200,
+          body: [{ 'buySellRatio' => '1.05', 'buyVol' => '100', 'sellVol' => '95' }].to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      result = market.taker_long_short_volume(symbol: 'BTCUSDT', period: '5m')
+      expect(result.first['buySellRatio']).to eq('1.05')
     end
   end
 

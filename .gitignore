@@ -45,3 +45,5 @@ doc/
 .yardopts
 ```
 .rspec_status
+
+docs/llms-full.txt

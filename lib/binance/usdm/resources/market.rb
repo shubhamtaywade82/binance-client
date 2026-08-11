@@ -56,12 +56,6 @@ module Binance
                                end_time: end_time)
         end
 
-        # Get current average price (class method)
-        # @example Binance::USDM::Resources::Market.avg_price(symbol: "ETHUSDT")
-        def avg_price(symbol:)
-          client.market.avg_price(symbol: symbol)
-        end
-
         # Get premium index (class method)
         # @example Binance::USDM::Resources::Market.premium_index(symbol: "ETHUSDT")
         def premium_index(symbol: nil)
@@ -191,13 +185,6 @@ module Binance
           get('/fapi/v1/markPriceKlines', params: params, signed: false)
         end
 
-        # Get current average price
-        # @param symbol [String] Trading symbol
-        # @return [Hash] Average price
-        def avg_price(symbol:)
-          get('/fapi/v1/avgPrice', params: { symbol: symbol }, signed: false)
-        end
-
         # Get premium index
         # @param symbol [String] Trading symbol (optional, all symbols if not provided)
         # @return [Hash, Array<Hash>] Premium index
@@ -280,7 +267,7 @@ module Binance
         def taker_long_short_volume(symbol:, period:, limit: 30, start_time: nil, end_time: nil)
           params = timed_params({ symbol: symbol, period: period, limit: limit }, start_time, end_time)
 
-          get('/futures/data/takerlongshortratio', params: params, signed: false)
+          get('/futures/data/takerlongshortRatio', params: params, signed: false)
         end
 
         # Get exchange info

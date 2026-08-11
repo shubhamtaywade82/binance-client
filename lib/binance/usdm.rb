@@ -5,49 +5,49 @@ require 'logger'
 require 'faraday'
 
 # Core files
-require_relative 'binance/usdm/errors'
-require_relative 'binance/usdm/constants'
+require_relative 'usdm/errors'
+require_relative 'usdm/constants'
 
 # Enums
-require_relative 'binance/usdm/enums/order_type'
+require_relative 'usdm/enums/order_type'
 
 # Helpers
-require_relative 'binance/usdm/helpers/signature_helper'
+require_relative 'usdm/helpers/signature_helper'
 
 # Transport layer
-require_relative 'binance/usdm/transport/request'
-require_relative 'binance/usdm/transport/response'
-require_relative 'binance/usdm/transport/endpoint'
-require_relative 'binance/usdm/transport/http'
+require_relative 'usdm/transport/request'
+require_relative 'usdm/transport/response'
+require_relative 'usdm/transport/endpoint'
+require_relative 'usdm/transport/http'
 
 # Authentication
-require_relative 'binance/usdm/authentication/clock'
+require_relative 'usdm/authentication/clock'
 
 # Rate limiting
-require_relative 'binance/usdm/rate_limit/bucket'
-require_relative 'binance/usdm/rate_limit/manager'
+require_relative 'usdm/rate_limit/bucket'
+require_relative 'usdm/rate_limit/manager'
 
 # Core classes
-require_relative 'binance/usdm/core/base_api'
-require_relative 'binance/usdm/core/base_model'
+require_relative 'usdm/core/base_api'
+require_relative 'usdm/core/base_model'
 
 # Client
-require_relative 'binance/usdm/client'
+require_relative 'usdm/client'
 
 # Models
-require_relative 'binance/usdm/models'
+require_relative 'usdm/models'
 
 # Resources
-require_relative 'binance/usdm/resources/order'
-require_relative 'binance/usdm/resources/account'
-require_relative 'binance/usdm/resources/market'
-require_relative 'binance/usdm/resources/algo_order'
+require_relative 'usdm/resources/order'
+require_relative 'usdm/resources/account'
+require_relative 'usdm/resources/market'
+require_relative 'usdm/resources/algo_order'
 
 # WebSocket
-require_relative 'binance/usdm/websocket/base_client'
-require_relative 'binance/usdm/websocket/market_client'
-require_relative 'binance/usdm/websocket/user_data_client'
-require_relative 'binance/usdm/websocket/order_book'
+require_relative 'usdm/websocket/base_client'
+require_relative 'usdm/websocket/market_client'
+require_relative 'usdm/websocket/user_data_client'
+require_relative 'usdm/websocket/order_book'
 
 # High-level API entry point for Binance USDⓈ-M Futures.
 module Binance

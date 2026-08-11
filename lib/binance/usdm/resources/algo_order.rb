@@ -111,7 +111,7 @@ module Binance
           params[:limit] = limit if limit
           params[:recvWindow] = recv_window if recv_window
 
-          get('/fapi/v1/algoOpenOrders', params: params)
+          get('/fapi/v1/openAlgoOrders', params: params)
         end
 
         # Get all algo orders (including historical)
@@ -128,7 +128,7 @@ module Binance
           params = { symbol: symbol }.compact
           options.each { |key, value| add_algo_option(params, key, value, ALGO_QUERY_OPTIONS) }
 
-          get('/fapi/v1/algoSubOrders', params: params)
+          get('/fapi/v1/allAlgoOrders', params: params)
         end
 
         # Cancel all open algo orders for a symbol

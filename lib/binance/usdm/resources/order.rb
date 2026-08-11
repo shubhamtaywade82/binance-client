@@ -382,7 +382,7 @@ module Binance
           params[:startTime] = start_time if start_time
           params[:endTime] = end_time if end_time
 
-          get('/fapi/v1/orderModifyHistory', params: params)
+          get('/fapi/v1/orderAmendment', params: params)
         end
       end
 
