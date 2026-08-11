@@ -6,7 +6,98 @@ require_relative "../models"
 module BinanceUSDM
   module Resources
     # Market data resource for fetching market information.
+    # Supports both instance methods (via client) and class methods (via default_client).
     class Market < BaseAPI
+      # Class methods for ORM/ActiveRecord-style usage
+      class << self
+        # Get the client to use (thread-local or default)
+        def client
+          Thread.current[:binance_usdm_client] || BinanceUSDM.default_client
+        end
+        
+        # Execute with a specific client
+        def using(client_instance)
+          previous = Thread.current[:binance_usdm_client]
+          Thread.current[:binance_usdm_client] = client_instance
+          yield
+        ensure
+          Thread.current[:binance_usdm_client] = previous
+        end
+        
+        # Get 24hr ticker price change statistics (class method)
+        # @example BinanceUSDM::Resources::Market.ticker_24h(symbol: "ETHUSDT")
+        def ticker_24h(symbol: nil)
+          symbol ? client.market.ticker_24h(symbol: symbol) : client.market.ticker_24h
+        end
+        
+        # Get latest price (class method)
+        # @example BinanceUSDM::Resources::Market.price("ETHUSDT")
+        def price(symbol = nil)
+          result = client.market.prices(symbol: symbol)
+          symbol ? result["price"] : result
+        end
+        
+        # Get current order book depth (class method)
+        # @example BinanceUSDM::Resources::Market.depth(symbol: "ETHUSDT", limit: 20)
+        def depth(symbol:, limit: 100)
+          client.market.depth(symbol: symbol, limit: limit)
+        end
+        
+        # Get recent trades (class method)
+        # @example BinanceUSDM::Resources::Market.recent_trades(symbol: "ETHUSDT")
+        def recent_trades(symbol:, limit: 500)
+          client.market.trades(symbol: symbol, limit: limit)
+        end
+        
+        # Get kline/candlestick data (class method)
+        # @example BinanceUSDM::Resources::Market.klines(symbol: "ETHUSDT", interval: "1m", limit: 100)
+        def klines(symbol:, interval:, limit: 500, start_time: nil, end_time: nil)
+          client.market.klines(symbol: symbol, interval: interval, limit: limit, start_time: start_time, end_time: end_time)
+        end
+        
+        # Get current average price (class method)
+        # @example BinanceUSDM::Resources::Market.avg_price(symbol: "ETHUSDT")
+        def avg_price(symbol:)
+          client.market.avg_price(symbol: symbol)
+        end
+        
+        # Get premium index (class method)
+        # @example BinanceUSDM::Resources::Market.premium_index(symbol: "ETHUSDT")
+        def premium_index(symbol: nil)
+          client.market.premium_index(symbol: symbol)
+        end
+        
+        # Get funding rate history (class method)
+        # @example BinanceUSDM::Resources::Market.funding_rate_history(symbol: "ETHUSDT")
+        def funding_rate_history(symbol:, limit: 100, start_time: nil, end_time: nil)
+          client.market.funding_rate_history(symbol: symbol, limit: limit, start_time: start_time, end_time: end_time)
+        end
+        
+        # Get open interest (class method)
+        # @example BinanceUSDM::Resources::Market.open_interest(symbol: "ETHUSDT")
+        def open_interest(symbol:)
+          client.market.open_interest(symbol: symbol)
+        end
+        
+        # Get exchange info (class method)
+        # @example BinanceUSDM::Resources::Market.exchange_info
+        def exchange_info
+          client.market.exchange_info
+        end
+        
+        # Get all instruments/symbols (class method)
+        # @example BinanceUSDM::Resources::Market.instruments
+        def instruments
+          client.market.instruments
+        end
+        
+        # Find a specific symbol by name
+        # @example BinanceUSDM::Resources::Market.find_symbol("ETHUSDT")
+        def find_symbol(symbol_name)
+          instruments.find { |s| s["symbol"] == symbol_name }
+        end
+      end
+      
       # Get 24hr ticker price change statistics
       # @param symbol [String] Trading symbol (optional, all symbols if not provided)
       # @return [Models::Ticker, Array<Models::Ticker>] Ticker statistics
