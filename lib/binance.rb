@@ -67,7 +67,7 @@ module Binance
 
   # Main unified client providing access to all Binance products
   class Client
-    attr_reader :spot, :um_futures, :cm_futures, :options, :margin, :wallet, :ws
+    attr_reader :api_key, :secret_key, :testnet, :recv_window, :logger
 
     # Initialize the unified Binance client
     # @param api_key [String, nil] Binance API key (optional for public-only usage)
@@ -86,15 +86,6 @@ module Binance
       if (@api_key && !@secret_key) || (@secret_key && !@api_key)
         raise ArgumentError, 'Both api_key and secret_key must be provided together, or both nil for public data only'
       end
-
-      # Initialize product modules lazily
-      @spot = nil
-      @um_futures = nil
-      @cm_futures = nil
-      @options = nil
-      @margin = nil
-      @wallet = nil
-      @ws = nil
     end
 
     # Lazy initialization for USD-M Futures module
