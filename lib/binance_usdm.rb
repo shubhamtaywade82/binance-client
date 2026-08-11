@@ -10,8 +10,24 @@ require_relative "BinanceUSDM/version"
 require_relative "BinanceUSDM/errors"
 require_relative "BinanceUSDM/constants"
 
+# Enums
+require_relative "BinanceUSDM/enums/order_type"
+
 # Helpers
 require_relative "BinanceUSDM/helpers/signature_helper"
+
+# Transport layer
+require_relative "BinanceUSDM/transport/request"
+require_relative "BinanceUSDM/transport/response"
+require_relative "BinanceUSDM/transport/endpoint"
+require_relative "BinanceUSDM/transport/http"
+
+# Authentication
+require_relative "BinanceUSDM/authentication/clock"
+
+# Rate limiting
+require_relative "BinanceUSDM/rate_limit/bucket"
+require_relative "BinanceUSDM/rate_limit/manager"
 
 # Core classes
 require_relative "BinanceUSDM/core/base_api"
@@ -27,6 +43,7 @@ require_relative "BinanceUSDM/models"
 require_relative "BinanceUSDM/resources/order"
 require_relative "BinanceUSDM/resources/account"
 require_relative "BinanceUSDM/resources/market"
+require_relative "BinanceUSDM/resources/algo_order"
 
 # WebSocket
 require_relative "BinanceUSDM/websocket/base_client"
@@ -75,7 +92,7 @@ module BinanceUSDM
   
   # Main API class providing access to all resources
   class API
-    attr_reader :client, :order, :account, :market, :ws
+    attr_reader :client, :order, :account, :market, :algo_orders, :ws
     
     # Initialize the API client
     # @param api_key [String] Binance API key
@@ -93,7 +110,26 @@ module BinanceUSDM
       @order = Resources::Order.new(@client)
       @account = Resources::Account.new(@client)
       @market = Resources::Market.new(@client)
+      @algo_orders = Resources::AlgoOrder.new(@client)
       @ws = WebSocket::MarketClient.new(testnet: testnet, logger: logger)
+    end
+    
+    # Synchronize time with Binance server
+    # @return [Integer] Server time in milliseconds
+    def sync_time!
+      client.sync_time!
+    end
+    
+    # Get time offset
+    # @return [Integer] Time offset in milliseconds
+    def time_offset
+      client.time_offset
+    end
+    
+    # Get rate limiter usage stats
+    # @return [Hash] Usage statistics
+    def rate_limit_usage
+      client.rate_limiter.usage
     end
     
     # Convenience methods delegating to resources
@@ -102,6 +138,12 @@ module BinanceUSDM
     # @see Resources::Order#place
     def place_order(**kwargs)
       @order.place(**kwargs)
+    end
+    
+    # Test order creation
+    # @see Resources::Order#test
+    def test_order(**kwargs)
+      @order.test(**kwargs)
     end
     
     # Cancel an order
@@ -114,6 +156,12 @@ module BinanceUSDM
     # @see Resources::Order#open_orders
     def open_orders(symbol: nil)
       @order.open_orders(symbol: symbol)
+    end
+    
+    # Get all open orders across all symbols
+    # @see Resources::Order#all_open_orders
+    def all_open_orders
+      @order.all_open_orders
     end
     
     # Get account info
@@ -144,6 +192,18 @@ module BinanceUSDM
     # @see Resources::Market#klines
     def klines(symbol:, interval:, limit: 500)
       @market.klines(symbol: symbol, interval: interval, limit: limit)
+    end
+    
+    # Create algo order
+    # @see Resources::AlgoOrder#create
+    def create_algo_order(**kwargs)
+      @algo_orders.create(**kwargs)
+    end
+    
+    # Get algo orders
+    # @see Resources::AlgoOrder#open
+    def algo_orders_open(symbol: nil)
+      @algo_orders.open(symbol: symbol)
     end
   end
 end
