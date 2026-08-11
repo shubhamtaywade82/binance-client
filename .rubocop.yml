@@ -1,0 +1,37 @@
+# The behavior of RuboCop can be controlled via the .rubocop.yml
+# configuration file. It makes it possible to enable/disable
+# certain cops (checks) and to alter their behavior if they accept
+# any parameters. The file can be placed either in your home
+# directory or in some project directory.
+#
+# RuboCop will start looking for the configuration file in the directory
+# where the inspected file is and continue its way up to the root directory.
+#
+# See https://docs.rubocop.org/rubocop/configuration
+
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+  # Unified-SDK core work-in-progress (not yet lint-clean, not loaded by the gem).
+  Exclude:
+    - lib/binance/core/context.rb
+    - lib/binance/core/rate_limit/**/*
+    - lib/binance/core/transport/**/*
+    - lib/binance/helpers/**/*
+
+Metrics/ParameterLists:
+  Max: 6
+
+# RSpec describe/it blocks are structured differently from production methods.
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+
+# Pure endpoint metadata table (~760 lines of data, 5 lookup methods).
+Metrics/ModuleLength:
+  Exclude:
+    - lib/binance/core/endpoint_registry.rb
+
+# Overridable callback stubs are single-line by design.
+Style/EmptyMethod:
+  EnforcedStyle: compact

@@ -42,7 +42,6 @@ coverage/
 .yardoc
 _yardoc/
 doc/
-.rubocop.yml
 .yardopts
 ```
 .rspec_status
