@@ -384,6 +384,24 @@ module Binance
 
           get('/fapi/v1/orderAmendment', params: params)
         end
+
+        # Get user's force (liquidation) orders
+        # @param symbol [String, nil] Trading symbol (optional, all symbols if not provided)
+        # @param auto_close_type [String, nil] LIQUIDATION or ADL
+        # @param start_time [Integer, nil] Start time in ms
+        # @param end_time [Integer, nil] End time in ms
+        # @param limit [Integer] Number of results (default: 50, max: 100)
+        # @return [Array<Models::Order>] Force orders
+        def force_orders(symbol: nil, auto_close_type: nil, start_time: nil, end_time: nil, limit: 50)
+          params = { limit: limit }
+          params[:symbol] = symbol if symbol
+          params[:autoCloseType] = auto_close_type if auto_close_type
+          params[:startTime] = start_time if start_time
+          params[:endTime] = end_time if end_time
+
+          response = get('/fapi/v1/forceOrders', params: params)
+          response.map { |order_data| Models::Order.new(order_data) }
+        end
       end
 
       # Order resource for managing futures orders.

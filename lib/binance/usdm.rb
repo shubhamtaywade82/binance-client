@@ -40,8 +40,12 @@ require_relative 'usdm/models'
 # Resources
 require_relative 'usdm/resources/order'
 require_relative 'usdm/resources/account'
+require_relative 'usdm/resources/account_config'
 require_relative 'usdm/resources/market'
+require_relative 'usdm/resources/market_data'
 require_relative 'usdm/resources/algo_order'
+require_relative 'usdm/resources/export'
+require_relative 'usdm/resources/convert'
 
 # WebSocket
 require_relative 'usdm/websocket/base_client'
@@ -145,7 +149,8 @@ module Binance
 
     # Main API class providing access to all resources
     class API
-      attr_reader :client, :order, :account, :market, :algo_orders, :ws
+      attr_reader :client, :order, :account, :account_config, :market, :market_data, :algo_orders, :export, :convert,
+                  :ws
 
       # Initialize the API client
       # @param api_key [String] Binance API key
@@ -268,8 +273,12 @@ module Binance
       def build_resources
         @order = Resources::Order.new(@client)
         @account = Resources::Account.new(@client)
+        @account_config = Resources::AccountConfig.new(@client)
         @market = Resources::Market.new(@client)
+        @market_data = Resources::MarketData.new(@client)
         @algo_orders = Resources::AlgoOrder.new(@client)
+        @export = Resources::Export.new(@client)
+        @convert = Resources::Convert.new(@client)
         @ws = WebSocket::MarketClient.new(testnet: @client.testnet, logger: @client.logger)
       end
     end

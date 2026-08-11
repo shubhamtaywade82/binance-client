@@ -214,6 +214,21 @@ RSpec.describe Binance::USDM::Resources::Order do
     end
   end
 
+  describe '#force_orders' do
+    it 'hits the forceOrders endpoint' do
+      stub_request(:get, %r{#{base_url}/fapi/v1/forceOrders})
+        .to_return(
+          status: 200,
+          body: [{ 'orderId' => 555, 'symbol' => 'BTCUSDT', 'status' => 'FILLED', 'side' => 'SELL' }].to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      result = order_resource.force_orders(symbol: 'BTCUSDT')
+      expect(result.first).to be_a(Binance::USDM::Models::Order)
+      expect(result.first.order_id).to eq(555)
+    end
+  end
+
   describe 'validation' do
     it 'raises ArgumentError when neither order_id nor orig_client_order_id is provided to find' do
       expect do
