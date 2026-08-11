@@ -2,8 +2,9 @@
 
 module Binance
   module Core
-    # Rate limit bucket for tracking API usage.
-    class Bucket
+    module RateLimit
+      # Rate limit bucket for tracking API usage.
+      class Bucket
       attr_reader :name, :limit, :interval, :counters
 
       # Initialize rate limit bucket
@@ -93,5 +94,6 @@ module Binance
         counters[key]
       end
     end
+  end
   end
 end

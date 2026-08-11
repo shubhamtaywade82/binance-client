@@ -4,8 +4,9 @@ require_relative 'bucket'
 
 module Binance
   module Core
-    # Rate limit manager for Binance API.
-    class Manager
+    module RateLimit
+      # Rate limit manager for Binance API.
+      class Manager
       attr_reader :buckets
 
       # Default rate limits for Binance USDⓈ-M Futures
