@@ -32,13 +32,7 @@ module Binance
 
           log_request(request, url, headers)
 
-          response = connection.run_request(request.method, url, body, headers)
-
-          Response.new(
-            status: response.status,
-            body: parse_body(response.body),
-            headers: response.headers.to_h
-          )
+          build_response(connection.run_request(request.method, url, body, headers))
         rescue Faraday::ConnectionFailed => e
           logger.error("Connection failed: #{e.message}")
           raise ConnectionError, "Failed to connect to Binance API: #{e.message}"
@@ -57,39 +51,49 @@ module Binance
 
         private
 
-        def prepare_url_and_body(request, timestamp_provider)
-          provider = timestamp_provider || SignatureHelper
-          path_url = "#{base_url}#{request.path}"
+        def build_response(response)
+          Response.new(
+            status: response.status,
+            body: parse_body(response.body),
+            headers: response.headers.to_h
+          )
+        end
 
+        def prepare_url_and_body(request, timestamp_provider)
+          path_url = "#{base_url}#{request.path}"
           if request.signed?
-            build_signed_payload(request, provider, path_url)
+            build_signed_payload(request, timestamp_provider || SignatureHelper, path_url)
           else
             build_unsigned_payload(request, path_url)
           end
         end
 
         def build_signed_payload(request, provider, path_url)
+          query = build_signed_query(request, provider)
+          if query_target?(request)
+            ["#{path_url}?#{query}", nil]
+          else
+            [path_url, query]
+          end
+        end
+
+        def build_signed_query(request, provider)
           params = request.params.dup
-          signed_query = SignatureHelper.build_signed_query_for_transport(
-            params,
-            api_key,
-            secret_key,
-            timestamp: provider.timestamp,
+          SignatureHelper.build_signed_query_for_transport(
+            params, api_key, secret_key, timestamp: provider.timestamp,
             recv_window: params.delete(:recv_window) || params.delete(:recvWindow) || 5000
           )
+        end
 
-          if %i[get delete].include?(request.method) || request.encoding == :query
-            ["#{path_url}?#{signed_query}", nil]
-          else
-            [path_url, signed_query]
-          end
+        def query_target?(request)
+          %i[get delete].include?(request.method) || request.encoding == :query
         end
 
         def build_unsigned_payload(request, path_url)
           formatted = SignatureHelper.format_params(request.params)
           return [path_url, nil] if formatted.empty?
 
-          if %i[get delete].include?(request.method)
+          if query_target?(request)
             query = URI.encode_www_form(formatted)
             ["#{path_url}?#{query}", nil]
           else
@@ -99,15 +103,9 @@ module Binance
         end
 
         def build_headers(request)
-          headers = { 'Content-Type' => content_type(request) }
-          headers['X-MBX-APIKEY'] = api_key if api_key && (request.needs_api_key? || request.signed?)
-          headers
-        end
-
-        def content_type(request)
-          case request.encoding
-          when :json then 'application/json'
-          else 'application/x-www-form-urlencoded'
+          content_type = request.encoding == :json ? 'application/json' : 'application/x-www-form-urlencoded'
+          { 'Content-Type' => content_type }.tap do |headers|
+            headers['X-MBX-APIKEY'] = api_key if api_key && (request.needs_api_key? || request.signed?)
           end
         end
 

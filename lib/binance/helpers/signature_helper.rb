@@ -70,19 +70,19 @@ module Binance
     def format_params(params)
       return {} if params.nil? || params.empty?
 
-      params.transform_keys { |key| to_camel_case(key) }
-            .compact
-            .transform_values do |v|
-              case v
-              when Symbol then v.to_s
-              when TrueClass then 'true'
-              when FalseClass then 'false'
-              else v
-              end
-            end
+      params.transform_keys { |key| to_camel_case(key) }.compact.transform_values { |v| format_value(v) }
     end
 
     private
+
+    def format_value(value)
+      case value
+      when Symbol then value.to_s
+      when TrueClass then 'true'
+      when FalseClass then 'false'
+      else value
+      end
+    end
 
     def detect_algorithm(key)
       key_str = key.to_s

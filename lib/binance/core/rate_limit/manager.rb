@@ -21,31 +21,7 @@ module Binance
         # Initialize rate limit manager
         # @param limits [Hash] Custom limits (optional, uses defaults if not provided)
         def initialize(limits: nil)
-          limits ||= DEFAULT_LIMITS
-
-          @buckets = {
-            request_weight: Bucket.new(
-              name: :request_weight,
-              limit: limits[:request_weight_1m],
-              interval: 60
-            ),
-            orders_10s: Bucket.new(
-              name: :orders_10s,
-              limit: limits[:orders_10s],
-              interval: 10
-            ),
-            orders_1m: Bucket.new(
-              name: :orders_1m,
-              limit: limits[:orders_1m],
-              interval: 60
-            ),
-            raw_requests: Bucket.new(
-              name: :raw_requests,
-              limit: limits[:raw_requests_1s],
-              interval: 1
-            )
-          }
-
+          @buckets = build_buckets(limits || DEFAULT_LIMITS)
           @mutex = Mutex.new
         end
 
@@ -53,27 +29,7 @@ module Binance
         # @param endpoint_spec [Transport::EndpointSpec] Endpoint specification
         # @return [Boolean] true if request allowed, false if would exceed limits
         def allow?(endpoint_spec)
-          @mutex.synchronize do
-            metadata = endpoint_spec.metadata
-
-            # Check request weight
-            weight = metadata[:weight] || 1
-            return false unless buckets[:request_weight].consume(weight)
-
-            # Check order count limits
-            if metadata[:order_count_10s].positive? && !buckets[:orders_10s].consume(metadata[:order_count_10s])
-              return false
-            end
-
-            if metadata[:order_count_1m].positive? && !buckets[:orders_1m].consume(metadata[:order_count_1m])
-              return false
-            end
-
-            # Check raw request rate
-            return false unless buckets[:raw_requests].consume(1)
-
-            true
-          end
+          @mutex.synchronize { allowed_for?(endpoint_spec.metadata) }
         end
 
         # Wait until request can be made
@@ -96,45 +52,18 @@ module Binance
         # Get current usage statistics
         # @return [Hash] Usage stats
         def usage
-          {
-            request_weight: {
-              remaining: buckets[:request_weight].remaining,
-              usage: buckets[:request_weight].usage
-            },
-            orders_10s: {
-              remaining: buckets[:orders_10s].remaining,
-              usage: buckets[:orders_10s].usage
-            },
-            orders_1m: {
-              remaining: buckets[:orders_1m].remaining,
-              usage: buckets[:orders_1m].usage
-            }
-          }
+          %i[request_weight orders_10s orders_1m].to_h do |name|
+            [name, bucket_usage(name)]
+          end
         end
 
         # Update limits from response headers
         # @param headers [Hash] Response headers
         def update_from_headers(headers)
           headers = headers.transform_keys(&:downcase)
-
-          if headers['x-mbx-used-weight-1m']
-            used = headers['x-mbx-used-weight-1m'].to_i
-            # Adjust bucket based on actual usage
-            buckets[:request_weight].reset
-            buckets[:request_weight].consume(used)
-          end
-
-          if headers['x-mbx-order-count-10s']
-            used = headers['x-mbx-order-count-10s'].to_i
-            buckets[:orders_10s].reset
-            buckets[:orders_10s].consume(used)
-          end
-
-          return unless headers['x-mbx-order-count-1m']
-
-          used = headers['x-mbx-order-count-1m'].to_i
-          buckets[:orders_1m].reset
-          buckets[:orders_1m].consume(used)
+          sync_bucket(:request_weight, headers['x-mbx-used-weight-1m'])
+          sync_bucket(:orders_10s, headers['x-mbx-order-count-10s'])
+          sync_bucket(:orders_1m, headers['x-mbx-order-count-1m'])
         end
 
         # Reset all buckets
@@ -154,6 +83,46 @@ module Binance
         # @return [Bucket, nil]
         def most_constrained_bucket
           buckets.max_by { |_, bucket| bucket.usage }&.last
+        end
+
+        private
+
+        def build_buckets(limits)
+          {
+            request_weight: Bucket.new(name: :request_weight, limit: limits[:request_weight_1m], interval: 60),
+            orders_10s: Bucket.new(name: :orders_10s, limit: limits[:orders_10s], interval: 10),
+            orders_1m: Bucket.new(name: :orders_1m, limit: limits[:orders_1m], interval: 60),
+            raw_requests: Bucket.new(name: :raw_requests, limit: limits[:raw_requests_1s], interval: 1)
+          }
+        end
+
+        def allowed_for?(metadata)
+          return false unless buckets[:request_weight].consume(metadata[:weight] || 1)
+          return false unless orders_allowed?(metadata)
+          return false unless buckets[:raw_requests].consume(1)
+
+          true
+        end
+
+        def orders_allowed?(metadata)
+          order_count_allowed?(buckets[:orders_10s], metadata[:order_count_10s]) &&
+            order_count_allowed?(buckets[:orders_1m], metadata[:order_count_1m])
+        end
+
+        def order_count_allowed?(bucket, count)
+          count.to_i.positive? ? bucket.consume(count) : true
+        end
+
+        def bucket_usage(name)
+          bucket = buckets[name]
+          { remaining: bucket.remaining, usage: bucket.usage }
+        end
+
+        def sync_bucket(name, used)
+          return unless used
+
+          buckets[name].reset
+          buckets[name].consume(used.to_i)
         end
       end
     end
