@@ -16,7 +16,13 @@ require_relative 'binance/core/endpoint_registry'
 require_relative 'binance/core/base_api'
 require_relative 'binance/core/base_model'
 
+# Unified entry point for all Binance products (spot, futures, options).
 module Binance
+  # Environment variable names for API credentials
+  ENV_KEYS = { api_key: 'BINANCE_API_KEY', secret_key: 'BINANCE_SECRET_KEY' }.freeze
+
+  # Fallback values when nothing is configured
+  DEFAULTS = { testnet: false, recv_window: 5000 }.freeze
   class Error < StandardError; end
 
   # Configure the Binance client
@@ -52,18 +58,34 @@ module Binance
   # @param recv_window [Integer] Receive window in ms (default: 5000)
   # @return [Client] Unified Binance client
   def self.client(api_key: nil, secret_key: nil, testnet: nil, recv_window: nil)
-    api_key ||= configuration&.api_key || ENV.fetch('BINANCE_API_KEY', nil)
-    secret_key ||= configuration&.secret_key || ENV.fetch('BINANCE_SECRET_KEY', nil)
-    testnet = testnet.nil? ? (configuration&.testnet || false) : testnet
-    recv_window ||= configuration&.recv_window || 5000
-
-    Client.new(
-      api_key: api_key,
-      secret_key: secret_key,
-      testnet: testnet,
-      recv_window: recv_window
-    )
+    Client.new(**client_options(api_key: api_key, secret_key: secret_key, testnet: testnet, recv_window: recv_window))
   end
+
+  # Resolve all client options from explicit values, configuration, and environment
+  # @return [Hash] Resolved client options
+  def self.client_options(api_key: nil, secret_key: nil, testnet: nil, recv_window: nil)
+    {
+      api_key: resolve(:api_key, api_key),
+      secret_key: resolve(:secret_key, secret_key),
+      testnet: resolve(:testnet, testnet),
+      recv_window: resolve(:recv_window, recv_window)
+    }
+  end
+
+  # Resolve a single option: explicit value > configuration > environment > default
+  # @param key [Symbol] Option key
+  # @param explicit [Object, nil] Explicitly passed value
+  # @return [Object] Resolved value
+  def self.resolve(key, explicit)
+    return explicit unless explicit.nil?
+
+    config_value = configuration&.public_send(key)
+    return config_value unless config_value.nil?
+    return DEFAULTS[key] unless ENV_KEYS.key?(key)
+
+    ENV.fetch(ENV_KEYS[key], nil)
+  end
+  private_class_method :client_options, :resolve
 
   # Main unified client providing access to all Binance products
   class Client
@@ -124,7 +146,8 @@ module Binance
 
     def ws
       raise NotImplementedError,
-            'Unified WebSocket manager is planned for a future release. Use BinanceUSDM::WebSocket::MarketClient for futures streaming.'
+            'Unified WebSocket manager is planned for a future release. ' \
+            'Use BinanceUSDM::WebSocket::MarketClient for futures streaming.'
     end
 
     # Synchronize time with Binance server

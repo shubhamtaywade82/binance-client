@@ -5,6 +5,34 @@ require_relative '../models'
 
 module BinanceUSDM
   module Resources
+    # Maps algo order option keywords to Binance API parameters.
+    # `enum: true` values are uppercased (API expects ENUM strings).
+    ALGO_ORDER_OPTIONS = {
+      position_side: { param: :positionSide, enum: true },
+      price: { param: :price },
+      working_type: { param: :workingType, enum: true },
+      time_in_force: { param: :timeInForce, enum: true },
+      client_order_id: { param: :newClientOrderId },
+      reduce_only: { param: :reduceOnly },
+      close_position: { param: :closePosition },
+      activation_price: { param: :activationPrice },
+      callback_rate: { param: :callbackRate },
+      price_protect: { param: :priceProtect },
+      recv_window: { param: :recvWindow }
+    }.freeze
+
+    # Maps algo order query keywords to Binance API parameters.
+    # `enum: true` values are uppercased (API expects ENUM strings).
+    ALGO_QUERY_OPTIONS = {
+      algo_type: { param: :algoType, enum: true },
+      status: { param: :status, enum: true },
+      start_time: { param: :startTime },
+      end_time: { param: :endTime },
+      page: { param: :page },
+      limit: { param: :limit },
+      recv_window: { param: :recvWindow }
+    }.freeze
+
     # Algo Order resource for managing futures algorithmic orders.
     # Implements all Binance USDⓈ-M Futures algo order endpoints.
     class AlgoOrder < BaseAPI
@@ -13,9 +41,9 @@ module BinanceUSDM
       # @param side [String] Order side: BUY or SELL
       # @param algo_type [String] Algo order type: STOP_LOSS, TAKE_PROFIT
       # @param quantity [String] Order quantity
+      # @param stop_price [String] Stop price (trigger price)
       # @param position_side [String, nil] Position side: BOTH, LONG, SHORT (default: BOTH)
       # @param price [String, nil] Limit price (for limit orders)
-      # @param stop_price [String] Stop price (trigger price)
       # @param working_type [String, nil] Working type: MARK_PRICE, CONTRACT_PRICE (default: CONTRACT_PRICE)
       # @param time_in_force [String, nil] Time in force: GTC, IOC, FOK (default: GTC)
       # @param client_order_id [String, nil] Client order ID
@@ -26,9 +54,7 @@ module BinanceUSDM
       # @param price_protect [Boolean, nil] Price protect trigger condition (default: false)
       # @param recv_window [Integer, nil] Receive window in milliseconds
       # @return [Hash] Created algo order details
-      def create(symbol:, side:, algo_type:, quantity:, stop_price:, position_side: nil, price: nil, working_type: nil, time_in_force: nil, client_order_id: nil,
-                 reduce_only: nil, close_position: nil, activation_price: nil,
-                 callback_rate: nil, price_protect: nil, recv_window: nil)
+      def create(symbol:, side:, algo_type:, quantity:, stop_price:, **options)
         params = {
           symbol: symbol,
           side: side.to_s.upcase,
@@ -36,18 +62,7 @@ module BinanceUSDM
           quantity: quantity,
           stopPrice: stop_price
         }
-
-        params[:positionSide] = position_side.to_s.upcase if position_side
-        params[:price] = price if price
-        params[:workingType] = working_type.to_s.upcase if working_type
-        params[:timeInForce] = time_in_force.to_s.upcase if time_in_force
-        params[:newClientOrderId] = client_order_id if client_order_id
-        params[:reduceOnly] = reduce_only if reduce_only == true
-        params[:closePosition] = close_position if close_position == true
-        params[:activationPrice] = activation_price if activation_price
-        params[:callbackRate] = callback_rate if callback_rate
-        params[:priceProtect] = price_protect if price_protect == true
-        params[:recvWindow] = recv_window if recv_window
+        options.each { |key, value| add_algo_option(params, key, value) }
 
         post('/fapi/v1/algoOrder', params: params)
       end
@@ -108,17 +123,9 @@ module BinanceUSDM
       # @param limit [Integer, nil] Number of results (default: 10, max: 100)
       # @param recv_window [Integer, nil] Receive window
       # @return [Hash] Algo orders with pagination
-      def all(symbol: nil, algo_type: nil, status: nil, start_time: nil, end_time: nil,
-              page: nil, limit: nil, recv_window: nil)
-        params = {}
-        params[:symbol] = symbol if symbol
-        params[:algoType] = algo_type.to_s.upcase if algo_type
-        params[:status] = status.to_s.upcase if status
-        params[:startTime] = start_time if start_time
-        params[:endTime] = end_time if end_time
-        params[:page] = page if page
-        params[:limit] = limit if limit
-        params[:recvWindow] = recv_window if recv_window
+      def all(symbol: nil, **options)
+        params = { symbol: symbol }.compact
+        options.each { |key, value| add_algo_option(params, key, value, ALGO_QUERY_OPTIONS) }
 
         get('/fapi/v1/algoSubOrders', params: params)
       end
@@ -134,6 +141,16 @@ module BinanceUSDM
         params[:recvWindow] = recv_window if recv_window
 
         delete('/fapi/v1/algoOpenOrders', params: params)
+      end
+
+      private
+
+      def add_algo_option(params, key, value, table = ALGO_ORDER_OPTIONS)
+        rule = table[key]
+        raise ArgumentError, "Unknown algo order option: #{key}" unless rule
+        return unless value
+
+        params[rule[:param]] = rule[:enum] ? value.to_s.upcase : value
       end
     end
   end

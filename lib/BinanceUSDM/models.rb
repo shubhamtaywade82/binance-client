@@ -94,7 +94,8 @@ module BinanceUSDM
       def margin_ratio
         return '0' if total_margin_balance.to_f.zero?
 
-        ((total_position_initial_margin.to_f / total_margin_balance) * 100).round(2).to_s
+        # Both operands are strings from the API; the cop's autocorrect is unsafe here.
+        ((total_position_initial_margin.to_f / total_margin_balance.to_f) * 100).round(2).to_s # rubocop:disable Style/FloatDivision
       end
     end
 

@@ -53,18 +53,14 @@ module Binance
 
       def convert_numeric(value)
         case value
-        when String
-          # Try to convert numeric strings to BigDecimal
-          if value.match?(/\A-?\d+\.?\d*\z/)
-            BigDecimal(value)
-          else
-            value
-          end
-        when Float, Integer
-          BigDecimal(value.to_s)
-        else
-          value
+        when String then convert_string(value)
+        when Float, Integer then BigDecimal(value.to_s)
+        else value
         end
+      end
+
+      def convert_string(value)
+        value.match?(/\A-?\d+\.?\d*\z/) ? BigDecimal(value) : value
       end
     end
   end

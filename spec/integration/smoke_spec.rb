@@ -6,7 +6,7 @@ require 'spec_helper'
 # Public market data needs no credentials; authenticated tests are skipped
 # unless BINANCE_TESTNET_API_KEY and BINANCE_TESTNET_SECRET_KEY are set
 # (these are wired as CI secrets in .github/workflows/live-integration.yml).
-RSpec.describe 'Binance USD-M testnet e2e' do # rubocop:disable Metrics/BlockLength
+RSpec.describe 'Binance USD-M testnet e2e' do
   let(:api_key) { ENV.fetch('BINANCE_TESTNET_API_KEY', nil) }
   let(:secret_key) { ENV.fetch('BINANCE_TESTNET_SECRET_KEY', nil) }
   let(:client) do
@@ -21,7 +21,7 @@ RSpec.describe 'Binance USD-M testnet e2e' do # rubocop:disable Metrics/BlockLen
     WebMock.disable_net_connect!(allow_localhost: true)
   end
 
-  describe 'market data' do # rubocop:disable Metrics/BlockLength
+  describe 'market data' do
     it 'fetches the 24h ticker' do
       ticker = client.market.ticker_24h(symbol: 'BTCUSDT')
       expect(ticker).to be_a(BinanceUSDM::Models::Ticker)

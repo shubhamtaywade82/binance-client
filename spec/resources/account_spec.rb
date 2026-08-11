@@ -74,7 +74,9 @@ RSpec.describe BinanceUSDM::Resources::Account do
   describe '#position_mode' do
     it 'returns current position mode' do
       stub_request(:get, %r{#{base_url}/fapi/v1/positionSide/dual})
-        .to_return(status: 200, body: { 'dualSidePosition' => true }.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200,
+                   body: { 'dualSidePosition' => true }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
 
       result = account.position_mode
       expect(result).to eq({ 'dualSidePosition' => true })
@@ -174,7 +176,9 @@ RSpec.describe BinanceUSDM::Resources::Account do
   describe 'listenKey management' do
     it 'creates, keeps alive, and closes listenKey' do
       stub_request(:post, %r{#{base_url}/fapi/v1/listenKey})
-        .to_return(status: 200, body: { 'listenKey' => 'test_key_123' }.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200,
+                   body: { 'listenKey' => 'test_key_123' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
       stub_request(:put, %r{#{base_url}/fapi/v1/listenKey})
         .to_return(status: 200, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
       stub_request(:delete, %r{#{base_url}/fapi/v1/listenKey})
@@ -191,7 +195,9 @@ RSpec.describe BinanceUSDM::Resources::Account do
   describe 'class methods' do
     it 'delegates info and balance using scoped client' do
       stub_request(:get, %r{#{base_url}/fapi/v2/account})
-        .to_return(status: 200, body: { 'availableBalance' => '5000.00' }.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200,
+                   body: { 'availableBalance' => '5000.00' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
 
       BinanceUSDM::Resources::Account.using(client) do
         res = BinanceUSDM::Resources::Account.info

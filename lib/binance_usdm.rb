@@ -51,6 +51,7 @@ require_relative 'BinanceUSDM/websocket/market_client'
 require_relative 'BinanceUSDM/websocket/user_data_client'
 require_relative 'BinanceUSDM/websocket/order_book'
 
+# High-level API entry point for Binance USDⓈ-M Futures.
 module BinanceUSDM
   class Error < StandardError; end
 
@@ -84,16 +85,8 @@ module BinanceUSDM
   # @return [API] Default API client
   def self.default_client
     @default_client ||= begin
-      api_key = configuration&.api_key || ENV.fetch('BINANCE_API_KEY', nil)
-      secret_key = configuration&.secret_key || ENV.fetch('BINANCE_SECRET_KEY', nil)
-      testnet = configuration&.testnet || false
-
-      unless api_key && secret_key
-        raise ConfigurationError,
-              'No API credentials configured. Call BinanceUSDM.configure or pass api_key/secret_key to client'
-      end
-
-      API.new(api_key: api_key, secret_key: secret_key, testnet: testnet)
+      validate_credentials!
+      API.new(**credentials)
     end
   end
 
@@ -110,11 +103,29 @@ module BinanceUSDM
   # @param testnet [Boolean] Use testnet (default: false)
   # @return [API] API client
   def self.client(api_key: nil, secret_key: nil, testnet: nil)
-    api_key ||= configuration&.api_key || ENV.fetch('BINANCE_API_KEY', nil)
-    secret_key ||= configuration&.secret_key || ENV.fetch('BINANCE_SECRET_KEY', nil)
-    testnet = testnet.nil? ? (configuration&.testnet || false) : testnet
+    API.new(
+      api_key: api_key || credentials[:api_key],
+      secret_key: secret_key || credentials[:secret_key],
+      testnet: testnet.nil? ? credentials[:testnet] : testnet
+    )
+  end
 
-    API.new(api_key: api_key, secret_key: secret_key, testnet: testnet)
+  # Resolve API credentials from configuration or environment
+  # @return [Hash] Credentials hash
+  def self.credentials
+    {
+      api_key: configuration&.api_key || ENV.fetch('BINANCE_API_KEY', nil),
+      secret_key: configuration&.secret_key || ENV.fetch('BINANCE_SECRET_KEY', nil),
+      testnet: configuration&.testnet || false
+    }
+  end
+
+  # Raise ConfigurationError unless API credentials are available
+  def self.validate_credentials!
+    return if credentials[:api_key] && credentials[:secret_key]
+
+    raise ConfigurationError,
+          'No API credentials configured. Call BinanceUSDM.configure or pass api_key/secret_key to client'
   end
 
   # Execute block with a specific client for thread-safe multi-account support
@@ -142,18 +153,8 @@ module BinanceUSDM
     # @param testnet [Boolean] Use testnet (default: false)
     # @param logger [Logger] Custom logger (optional)
     def initialize(api_key:, secret_key:, testnet: false, logger: nil)
-      @client = Client.new(
-        api_key: api_key,
-        secret_key: secret_key,
-        testnet: testnet,
-        logger: logger
-      )
-
-      @order = Resources::Order.new(@client)
-      @account = Resources::Account.new(@client)
-      @market = Resources::Market.new(@client)
-      @algo_orders = Resources::AlgoOrder.new(@client)
-      @ws = WebSocket::MarketClient.new(testnet: testnet, logger: logger)
+      @client = Client.new(api_key: api_key, secret_key: secret_key, testnet: testnet, logger: logger)
+      build_resources
       @user_stream = nil
     end
 
@@ -260,6 +261,16 @@ module BinanceUSDM
     # @see Resources::AlgoOrder#open
     def algo_orders_open(symbol: nil)
       @algo_orders.open(symbol: symbol)
+    end
+
+    private
+
+    def build_resources
+      @order = Resources::Order.new(@client)
+      @account = Resources::Account.new(@client)
+      @market = Resources::Market.new(@client)
+      @algo_orders = Resources::AlgoOrder.new(@client)
+      @ws = WebSocket::MarketClient.new(testnet: @client.testnet, logger: @client.logger)
     end
   end
 end
