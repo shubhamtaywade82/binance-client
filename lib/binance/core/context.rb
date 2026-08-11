@@ -66,9 +66,9 @@ module Binance
       def base_url_for(env)
         case env
         when :testnet
-          BinanceUSDM::Constants::Urls::TESTNET_REST_API_BASE
+          Binance::Constants::Urls::UM_FUTURES_TESTNET_REST_API_BASE
         when :production
-          BinanceUSDM::Constants::Urls::REST_API_BASE
+          Binance::Constants::Urls::UM_FUTURES_REST_API_BASE
         else
           raise ArgumentError, "Unknown environment: #{env}"
         end

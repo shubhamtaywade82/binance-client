@@ -34,7 +34,6 @@ Thumbs.db
 .env
 .env.local
 .env.*
-```
 # Ruby specific
 *.gem
 *.rbc
