@@ -8,30 +8,16 @@ module Binance
       attr_reader :credentials, :environment, :clock, :recv_window,
                   :rate_limiter, :transport, :logger, :endpoint_registry
 
-      def initialize(
-        credentials:,
-        environment: :production,
-        clock: nil,
-        recv_window: 5000,
-        rate_limiter: nil,
-        transport: nil,
-        logger: nil,
-        endpoint_registry: nil
-      )
+      def initialize(credentials:, environment: :production, recv_window: 5000,
+                     logger: nil, services: {})
         @credentials = credentials
         @environment = environment
-        @clock = clock || Clock.new
         @recv_window = recv_window
-        @rate_limiter = rate_limiter || RateLimit::Manager.new
-        @transport = transport || Transport::HTTP.new(
-          base_url: base_url_for(environment),
-          api_key: credentials&.api_key,
-          secret_key: extract_secret(credentials),
-          timeout: 30,
-          logger: logger
-        )
         @logger = logger || default_logger
-        @endpoint_registry = endpoint_registry || EndpointRegistry
+        @clock = services[:clock] || Clock.new
+        @rate_limiter = services[:rate_limiter] || RateLimit::Manager.new
+        @transport = services[:transport] || build_transport(credentials, environment, logger)
+        @endpoint_registry = services[:endpoint_registry] || EndpointRegistry
       end
 
       def server_time
@@ -43,15 +29,7 @@ module Binance
       end
 
       def sync_time!
-        response = transport.execute(
-          Transport::Request.new(
-            method: :get,
-            path: '/fapi/v1/time',
-            security: :market,
-            encoding: :query
-          )
-        )
-        server_time_ms = response.body['serverTime']
+        server_time_ms = fetch_server_time
         clock.sync(server_time_ms)
         logger.info("Time synchronized: offset=#{clock.offset_str}")
         server_time_ms
@@ -62,6 +40,23 @@ module Binance
       end
 
       private
+
+      def fetch_server_time
+        response = transport.execute(
+          Transport::Request.new(method: :get, path: '/fapi/v1/time', security: :market, encoding: :query)
+        )
+        response.body['serverTime']
+      end
+
+      def build_transport(credentials, environment, logger)
+        Transport::HTTP.new(
+          base_url: base_url_for(environment),
+          api_key: credentials&.api_key,
+          secret_key: extract_secret(credentials),
+          timeout: 30,
+          logger: logger
+        )
+      end
 
       def base_url_for(env)
         case env
