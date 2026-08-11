@@ -1,29 +1,32 @@
-```ruby
+```
 # Dependencies
-.bundle/
 vendor/bundle/
+.bundle/
 
 # Build artifacts
 *.gem
 *.rbc
 coverage/
-tmp/
+.rspec_results
+test/tmp/
+test/version_tmp/
 
-# Environment
+# Environment variables
 .env
 .env.local
 .env.*
 
-# Logs
-*.log
-
-# Editor/IDE
+# Editor/IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
+*.tmp
 
-# OS generated
+# OS generated files
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
 ```
