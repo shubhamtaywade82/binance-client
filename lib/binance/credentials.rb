@@ -49,7 +49,7 @@ module Binance
       end
 
       def sign(payload)
-        private_key.sign(OpenSSL::Digest::SHA256.new, payload)
+        private_key.sign(OpenSSL::Digest.new('SHA256'), payload)
       end
     end
 
@@ -61,11 +61,10 @@ module Binance
         super(api_key: api_key, algorithm: :ed25519)
         @private_key = case private_key
                        when String
-                         if defined?(Ed25519::SigningKey)
-                           Ed25519::SigningKey.new([private_key].pack('H*'))
-                         else
-                           raise RuntimeError, 'Ed25519 gem required for Ed25519 credentials'
-                         end
+                         raise 'Ed25519 gem required for Ed25519 credentials' unless defined?(Ed25519::SigningKey)
+
+                         Ed25519::SigningKey.new([private_key].pack('H*'))
+
                        when Ed25519::SigningKey
                          private_key
                        else
@@ -74,7 +73,7 @@ module Binance
       end
 
       def sign(payload)
-        private_key.sign(payload.unpack('B*').first)
+        private_key.sign(payload.unpack1('B*'))
       end
     end
   end
