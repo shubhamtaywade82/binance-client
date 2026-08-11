@@ -15,6 +15,7 @@ require_relative 'binance/constants'
 require_relative 'binance/core/endpoint_registry'
 require_relative 'binance/core/base_api'
 require_relative 'binance/core/base_model'
+require_relative 'binance/core/catalog'
 
 # Core infrastructure
 require_relative 'binance/helpers/signature_helper'
@@ -26,6 +27,9 @@ require_relative 'binance/core/transport/request'
 require_relative 'binance/core/transport/response'
 require_relative 'binance/core/transport/http'
 require_relative 'binance/core/context'
+
+# Generic product clients (all Binance REST families)
+require_relative 'binance/products/api'
 
 # Unified entry point for all Binance products (spot, futures, options).
 module Binance
@@ -135,33 +139,34 @@ module Binance
       end
     end
 
-    def spot
-      raise NotImplementedError, 'Spot client is planned for a future release'
+    # Generic access to any catalog product (spot, wallet, margin, ...)
+    # @param name [Symbol] Product key (e.g. :spot, :wallet)
+    # @return [Binance::Products::API]
+    def product(name)
+      raise ArgumentError, "Unknown product: #{name}" unless Core::Catalog.product_metadata(name)
+
+      @products ||= {}
+      @products[name] ||= Products::API.new(
+        product: name,
+        api_key: @api_key,
+        secret_key: @secret_key,
+        testnet: @testnet,
+        logger: @logger
+      )
     end
 
-    def cm_futures
-      raise NotImplementedError, 'COIN-M Futures client is planned for a future release'
+    # All catalog products are exposed as convenience accessors.
+    %i[
+      spot cm_futures options portfolio_margin portfolio_margin_pro
+      wallet margin sub_account simple_earn staking convert pay fiat c2c
+      gift_card mining rebate algo crypto_loan vip_loan vip_service vip_caas
+      institutional_loan discount_buy dual_investment exchange_link fund_account
+      link_trade link_plus block_matching prediction stocks copy_trading alpha kyc
+    ].each do |product_name|
+      define_method(product_name) { product(product_name) }
     end
 
-    def options
-      raise NotImplementedError, 'Options client is planned for a future release'
-    end
-
-    def margin
-      raise NotImplementedError, 'Margin client is planned for a future release'
-    end
-
-    def wallet
-      raise NotImplementedError, 'Wallet client is planned for a future release'
-    end
-
-    def ws
-      raise NotImplementedError,
-            'Unified WebSocket manager is planned for a future release. ' \
-            'Use Binance::USDM::WebSocket::MarketClient for futures streaming.'
-    end
-
-    # Synchronize time with Binance server
+    # Synchronize time with Binance server for all active products
     # @return [Hash] Server times from each product
     def sync_time!
       results = {}
@@ -170,7 +175,18 @@ module Binance
       rescue StandardError => e
         @logger.warn("Failed to sync UM Futures time: #{e.message}")
       end
-      results
+      products.each do |name, api|
+        results[name] = api.sync_time!
+      rescue StandardError => e
+        @logger.warn("Failed to sync #{name} time: #{e.message}")
+      end
+      results.compact
+    end
+
+    # All lazily-initialized generic product clients
+    # @return [Hash<Symbol, Binance::Products::API>]
+    def products
+      @products ||= {}
     end
 
     # Check if client has credentials for signed requests

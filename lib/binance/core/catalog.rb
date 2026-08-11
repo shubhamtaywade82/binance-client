@@ -1011,6 +1011,38 @@ module Binance
         vip_service: { family: "VIP Service REST API", host: 'https://api.binance.com', time_path: "/api/v3/time" },
         wallet: { family: "Wallet REST API", host: 'https://api.binance.com', time_path: "/api/v3/time" },
       }.freeze
+
+      class << self
+        # Find an endpoint by product and action
+        # @param product [Symbol] Product key (e.g. :spot)
+        # @param action [Symbol] Action key (e.g. :get_api_v3_ping)
+        # @return [Hash, nil] Endpoint spec or nil
+        def find(product, action)
+          ENDPOINTS[product]&.find { |e| e[:action] == action }
+        end
+
+        # Get all endpoints for a product
+        # @param product [Symbol] Product key
+        # @return [Array<Hash>] Endpoint specs
+        def for_product(product)
+          ENDPOINTS.fetch(product, [])
+        end
+
+        # Check if an action exists for a product
+        # @param product [Symbol] Product key
+        # @param action [Symbol] Action key
+        # @return [Boolean]
+        def exists?(product, action)
+          !find(product, action).nil?
+        end
+
+        # Get metadata for a product
+        # @param product [Symbol] Product key
+        # @return [Hash, nil] Product metadata
+        def product_metadata(product)
+          PRODUCTS[product]
+        end
+      end
     end
   end
 end

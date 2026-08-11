@@ -136,10 +136,15 @@ RSpec.describe Binance::Client do
       expect(unified_client.um_futures.client.api_key).to eq('api_key')
     end
 
-    it 'raises NotImplementedError for unreleased submodules' do
+    it 'exposes generic product clients for all catalog products' do
       unified_client = Binance.client(api_key: 'api_key', secret_key: 'secret_key')
-      expect { unified_client.spot }.to raise_error(NotImplementedError, /Spot client is planned/)
-      expect { unified_client.cm_futures }.to raise_error(NotImplementedError, /COIN-M Futures client is planned/)
+      expect(unified_client.spot).to be_a(Binance::Products::API)
+      expect(unified_client.spot.product).to eq(:spot)
+      expect(unified_client.cm_futures).to be_a(Binance::Products::API)
+      expect(unified_client.cm_futures.product).to eq(:cm_futures)
+      expect(unified_client.wallet).to be_a(Binance::Products::API)
+      expect(unified_client.product(:margin)).to be_a(Binance::Products::API)
+      expect { unified_client.product(:not_a_product) }.to raise_error(ArgumentError, /Unknown product/)
     end
   end
 end

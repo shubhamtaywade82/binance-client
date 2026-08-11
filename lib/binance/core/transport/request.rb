@@ -32,7 +32,7 @@ module Binance
         # Check if request needs API key header
         # @return [Boolean]
         def needs_api_key?
-          %i[trade user_data market].include?(security)
+          %i[trade user_data market user_stream].include?(security)
         end
 
         # Get HTTP method as string

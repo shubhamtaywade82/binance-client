@@ -81,7 +81,7 @@ module Binance
           params = request.params.dup
           SignatureHelper.build_signed_query_for_transport(
             params, api_key, secret_key, timestamp: provider.timestamp,
-            recv_window: params.delete(:recv_window) || params.delete(:recvWindow) || 5000
+                                         recv_window: params.delete(:recv_window) || params.delete(:recvWindow) || 5000
           )
         end
 
@@ -103,10 +103,19 @@ module Binance
         end
 
         def build_headers(request)
-          content_type = request.encoding == :json ? 'application/json' : 'application/x-www-form-urlencoded'
-          { 'Content-Type' => content_type }.tap do |headers|
+          {}.tap do |headers|
+            if body_target?(request)
+              content_type = request.encoding == :json ? 'application/json' : 'application/x-www-form-urlencoded'
+              headers['Content-Type'] = content_type
+            end
             headers['X-MBX-APIKEY'] = api_key if api_key && (request.needs_api_key? || request.signed?)
           end
+        end
+
+        # Content-Type header is only set when a request body is sent
+        # (some products, e.g. Options, reject it on GET).
+        def body_target?(request)
+          !%i[get delete].include?(request.method) && request.encoding != :query
         end
 
         def parse_body(body)
