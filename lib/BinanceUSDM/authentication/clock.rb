@@ -20,13 +20,13 @@ module BinanceUSDM
       # Get current timestamp in milliseconds
       # @return [Integer] Current time in ms
       def timestamp
-        Time.now.to_i * 1000 + time_offset
+        (Time.now.to_i * 1000) + time_offset
       end
 
       # Get current time
       # @return [Time] Current time
       def now
-        Time.now + time_offset / 1000.0
+        Time.now + (time_offset / 1000.0)
       end
 
       # Update time offset based on server time
@@ -73,7 +73,7 @@ module BinanceUSDM
       # Get human-readable offset
       # @return [String] Offset in milliseconds
       def offset_str
-        "#{time_offset.positive? ? '+' : ''}#{time_offset}ms"
+        "#{'+' if time_offset.positive?}#{time_offset}ms"
       end
     end
   end

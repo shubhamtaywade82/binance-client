@@ -52,8 +52,8 @@ module Binance
   # @param recv_window [Integer] Receive window in ms (default: 5000)
   # @return [Client] Unified Binance client
   def self.client(api_key: nil, secret_key: nil, testnet: nil, recv_window: nil)
-    api_key ||= configuration&.api_key || ENV['BINANCE_API_KEY']
-    secret_key ||= configuration&.secret_key || ENV['BINANCE_SECRET_KEY']
+    api_key ||= configuration&.api_key || ENV.fetch('BINANCE_API_KEY', nil)
+    secret_key ||= configuration&.secret_key || ENV.fetch('BINANCE_SECRET_KEY', nil)
     testnet = testnet.nil? ? (configuration&.testnet || false) : testnet
     recv_window ||= configuration&.recv_window || 5000
 
@@ -83,9 +83,9 @@ module Binance
       @logger = logger || default_logger
 
       # Validate credentials if provided
-      if (@api_key && !@secret_key) || (@secret_key && !@api_key)
-        raise ArgumentError, 'Both api_key and secret_key must be provided together, or both nil for public data only'
-      end
+      return unless (@api_key && !@secret_key) || (@secret_key && !@api_key)
+
+      raise ArgumentError, 'Both api_key and secret_key must be provided together, or both nil for public data only'
     end
 
     # Lazy initialization for USD-M Futures module

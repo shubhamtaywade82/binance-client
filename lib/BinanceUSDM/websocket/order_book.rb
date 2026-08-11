@@ -111,7 +111,7 @@ module BinanceUSDM
         @event_buffer.each do |event|
           next if event['u'] < @last_update_id
 
-          if event['U'] <= @last_update_id && event['u'] >= @last_update_id
+          if @last_update_id.between?(event['U'], event['u'])
             apply_price_levels(event['b'], @bids)
             apply_price_levels(event['a'], @asks)
             @last_update_id = event['u']

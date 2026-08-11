@@ -84,8 +84,8 @@ module BinanceUSDM
   # @return [API] Default API client
   def self.default_client
     @default_client ||= begin
-      api_key = configuration&.api_key || ENV['BINANCE_API_KEY']
-      secret_key = configuration&.secret_key || ENV['BINANCE_SECRET_KEY']
+      api_key = configuration&.api_key || ENV.fetch('BINANCE_API_KEY', nil)
+      secret_key = configuration&.secret_key || ENV.fetch('BINANCE_SECRET_KEY', nil)
       testnet = configuration&.testnet || false
 
       unless api_key && secret_key
@@ -110,8 +110,8 @@ module BinanceUSDM
   # @param testnet [Boolean] Use testnet (default: false)
   # @return [API] API client
   def self.client(api_key: nil, secret_key: nil, testnet: nil)
-    api_key ||= configuration&.api_key || ENV['BINANCE_API_KEY']
-    secret_key ||= configuration&.secret_key || ENV['BINANCE_SECRET_KEY']
+    api_key ||= configuration&.api_key || ENV.fetch('BINANCE_API_KEY', nil)
+    secret_key ||= configuration&.secret_key || ENV.fetch('BINANCE_SECRET_KEY', nil)
     testnet = testnet.nil? ? (configuration&.testnet || false) : testnet
 
     API.new(api_key: api_key, secret_key: secret_key, testnet: testnet)
