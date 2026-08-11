@@ -16,6 +16,17 @@ require_relative 'binance/core/endpoint_registry'
 require_relative 'binance/core/base_api'
 require_relative 'binance/core/base_model'
 
+# Core infrastructure
+require_relative 'binance/helpers/signature_helper'
+require_relative 'binance/credentials'
+require_relative 'binance/core/clock'
+require_relative 'binance/core/rate_limit/bucket'
+require_relative 'binance/core/rate_limit/manager'
+require_relative 'binance/core/transport/request'
+require_relative 'binance/core/transport/response'
+require_relative 'binance/core/transport/http'
+require_relative 'binance/core/context'
+
 # Unified entry point for all Binance products (spot, futures, options).
 module Binance
   # Environment variable names for API credentials
