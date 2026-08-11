@@ -34,11 +34,4 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'faye-websocket', '~> 0.11'
   spec.add_dependency 'logger', '~> 1.5'
   spec.add_dependency 'zeitwerk', '~> 2.6'
-
-  # Development dependencies
-  spec.add_development_dependency 'rake', '~> 13.0'
-  spec.add_development_dependency 'rspec', '~> 3.12'
-  spec.add_development_dependency 'rubocop', '~> 1.50'
-  spec.add_development_dependency 'vcr', '~> 6.1'
-  spec.add_development_dependency 'webmock', '~> 3.18'
 end

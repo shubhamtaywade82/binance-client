@@ -12,6 +12,73 @@ require_relative 'rate_limit/manager'
 module BinanceUSDM
   # HTTP client for making API requests to Binance.
   class Client
+    # Error handling for HTTP responses and transport failures.
+    module ResponseHandling
+      private
+
+      def perform(request_obj, endpoint)
+        response = @http.execute(request_obj, timestamp_provider: clock)
+        rate_limiter.update_from_headers(response.headers)
+        handle_response_body(response.body, response.status, response.headers, endpoint)
+        response.body
+      rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
+        raise_transport_error(e)
+      end
+
+      def raise_transport_error(error)
+        case error
+        when Faraday::TimeoutError
+          logger.error("Request timeout: #{error.message}")
+          raise TimeoutError, "Request timeout: #{error.message}"
+        else
+          logger.error("Connection failed: #{error.message}")
+          raise ConnectionError, "Failed to connect to Binance API: #{error.message}"
+        end
+      end
+
+      def handle_response_body(body, status, headers, endpoint)
+        return unless body.is_a?(Hash) && body['code']
+
+        code = body['code'].to_i
+        return if ok_response?(code, status)
+
+        raise build_api_error(code, body, status, headers, endpoint)
+      end
+
+      def ok_response?(code, status)
+        code == 200 || (status && (200..299).cover?(status) && code.positive?)
+      end
+
+      def build_api_error(code, body, status, headers, endpoint)
+        message = body['msg'] || 'Unknown error'
+        error = BinanceUSDM.create_error(
+          code: code,
+          message: message,
+          http_status: status,
+          headers: headers,
+          endpoint: endpoint
+        )
+        logger.error("[API ERROR] #{error.class}: #{message} (code: #{code})")
+        error
+      end
+    end
+
+    # Time synchronization before signed requests.
+    module TimeSync
+      private
+
+      def sync_time_if_needed!(request_obj)
+        return unless auto_sync_time && clock.sync_needed? && request_obj.signed?
+
+        sync_time!
+      rescue StandardError => e
+        logger.warn("Auto time sync failed: #{e.message}")
+      end
+    end
+
+    include ResponseHandling
+    include TimeSync
+
     attr_reader :api_key, :secret_key, :testnet, :logger, :clock, :rate_limiter, :http,
                 :order, :account, :market, :algo_orders
     attr_accessor :auto_sync_time
@@ -22,23 +89,11 @@ module BinanceUSDM
       @testnet = testnet
       @logger = logger || default_logger
       @base_url = testnet ? Constants::Urls::TESTNET_REST_API_BASE : Constants::Urls::REST_API_BASE
-
       @clock = Authentication::Clock.new
       @auto_sync_time = true
       @rate_limiter = RateLimit::Manager.new
-
-      @http = Transport::HTTP.new(
-        base_url: @base_url,
-        api_key: api_key,
-        secret_key: secret_key,
-        timeout: timeout,
-        logger: @logger
-      )
-
-      @order = Resources::Order.new(self)
-      @account = Resources::Account.new(self)
-      @market = Resources::Market.new(self)
-      @algo_orders = Resources::AlgoOrder.new(self)
+      @http = build_http(timeout)
+      build_resources
     end
 
     def connection
@@ -56,18 +111,11 @@ module BinanceUSDM
     # Synchronize time with Binance server
     # @raise [NetworkError] if sync fails
     def sync_time!
-      response = @http.execute(
-        Transport::Request.new(
-          method: :get,
-          path: '/fapi/v1/time',
-          security: :market,
-          encoding: :query
-        )
-      )
+      server_time_ms = @http.execute(
+        Transport::Request.new(method: :get, path: '/fapi/v1/time', security: :market, encoding: :query)
+      ).body['serverTime']
 
-      server_time_ms = response.body['serverTime']
       clock.sync(server_time_ms)
-
       logger.info("Time synchronized with Binance server: offset=#{clock.offset_str}")
       server_time_ms
     rescue StandardError => e
@@ -76,47 +124,27 @@ module BinanceUSDM
     end
 
     # Perform GET request
-    # @param endpoint [String] API endpoint
-    # @param params [Hash] Query parameters
-    # @param signed [Boolean] Whether request requires signature (default: true)
-    # @param security [Symbol] Security type (:trade, :user_data, :market)
-    # @param encoding [Symbol] Parameter encoding (:query, :form, :json)
     # @return [Hash, Array] Parsed JSON response
     def get(endpoint, params: {}, signed: true, security: nil, encoding: :query)
-      request(:get, endpoint, params, signed, security, encoding)
+      request(:get, endpoint, params, signed: signed, security: security, encoding: encoding)
     end
 
     # Perform POST request
-    # @param endpoint [String] API endpoint
-    # @param params [Hash] Request body
-    # @param signed [Boolean] Whether request requires signature (default: true)
-    # @param security [Symbol] Security type (:trade, :user_data, :market)
-    # @param encoding [Symbol] Parameter encoding (:query, :form, :json)
     # @return [Hash, Array] Parsed JSON response
     def post(endpoint, params: {}, signed: true, security: nil, encoding: :form)
-      request(:post, endpoint, params, signed, security, encoding)
+      request(:post, endpoint, params, signed: signed, security: security, encoding: encoding)
     end
 
     # Perform PUT request
-    # @param endpoint [String] API endpoint
-    # @param params [Hash] Request body
-    # @param signed [Boolean] Whether request requires signature (default: true)
-    # @param security [Symbol] Security type (:trade, :user_data, :market)
-    # @param encoding [Symbol] Parameter encoding (:query, :form, :json)
     # @return [Hash, Array] Parsed JSON response
     def put(endpoint, params: {}, signed: true, security: nil, encoding: :form)
-      request(:put, endpoint, params, signed, security, encoding)
+      request(:put, endpoint, params, signed: signed, security: security, encoding: encoding)
     end
 
     # Perform DELETE request
-    # @param endpoint [String] API endpoint
-    # @param params [Hash] Query parameters
-    # @param signed [Boolean] Whether request requires signature (default: true)
-    # @param security [Symbol] Security type (:trade, :user_data, :market)
-    # @param encoding [Symbol] Parameter encoding (:query, :form, :json)
     # @return [Hash, Array] Parsed JSON response
     def delete(endpoint, params: {}, signed: true, security: nil, encoding: :query)
-      request(:delete, endpoint, params, signed, security, encoding)
+      request(:delete, endpoint, params, signed: signed, security: security, encoding: encoding)
     end
 
     # Execute request with endpoint spec
@@ -125,99 +153,33 @@ module BinanceUSDM
     # @return [Hash, Array] Parsed JSON response
     def execute(endpoint_spec, params = {})
       request_obj = endpoint_spec.build_request(params)
-
-      # Auto-sync time if enabled
-      if auto_sync_time && clock.sync_needed? && request_obj.signed?
-        begin
-          sync_time!
-        rescue StandardError => e
-          logger.warn("Auto time sync failed: #{e.message}")
-        end
-      end
-
-      # Check rate limits
-      unless rate_limiter.allow?(endpoint_spec)
-        logger.warn("Rate limit exceeded for #{endpoint_spec.path}")
-        raise Errors::RateLimitError, 'Rate limit exceeded'
-      end
-
-      # Execute request
-      response = @http.execute(request_obj, timestamp_provider: clock)
-
-      # Update rate limiter from headers
-      rate_limiter.update_from_headers(response.headers)
-
-      # Handle error responses
-      handle_response_body(response.body, response.status, response.headers, endpoint_spec.path)
-
-      response.body
+      sync_time_if_needed!(request_obj)
+      enforce_rate_limit!(endpoint_spec)
+      perform(request_obj, endpoint_spec.path)
     end
 
     private
 
     # Perform HTTP request with error handling
-    # @param method [Symbol] HTTP method
-    # @param endpoint [String] API endpoint
-    # @param params [Hash] Request parameters
-    # @param signed [Boolean] Whether request requires signature
-    # @param security [Symbol] Security type
-    # @param encoding [Symbol] Parameter encoding
     # @return [Hash, Array] Parsed JSON response
-    def request(method, endpoint, params, signed, security, encoding)
-      connection
-      security ||= (signed ? :trade : :market)
-
+    def request(method, endpoint, params, **options)
       request_obj = Transport::Request.new(
         method: method,
         path: endpoint,
         params: params,
-        security: security,
-        encoding: encoding
+        security: options[:security] || (options[:signed] ? :trade : :market),
+        encoding: options[:encoding] || :query
       )
-
-      if auto_sync_time && clock.sync_needed? && request_obj.signed?
-        begin
-          sync_time!
-        rescue StandardError => e
-          logger.warn("Auto time sync failed: #{e.message}")
-        end
-      end
-
-      response = @http.execute(request_obj, timestamp_provider: clock)
-      rate_limiter.update_from_headers(response.headers)
-      handle_response_body(response.body, response.status, response.headers, endpoint)
-
-      response.body
-    rescue Faraday::ConnectionFailed => e
-      logger.error("Connection failed: #{e.message}")
-      raise ConnectionError, "Failed to connect to Binance API: #{e.message}"
-    rescue Faraday::TimeoutError => e
-      logger.error("Request timeout: #{e.message}")
-      raise TimeoutError, "Request timeout: #{e.message}"
+      sync_time_if_needed!(request_obj)
+      perform(request_obj, endpoint)
     end
 
-    # Handle response body and raise errors if needed
-    # @param body [Hash, Array] Response body
-    # @param status [Integer] HTTP status code
-    # @param headers [Hash] Response headers
-    # @param endpoint [String] API endpoint
-    def handle_response_body(body, status, headers, endpoint)
-      return unless body.is_a?(Hash) && body['code']
+    # Raise when the rate limiter rejects the request
+    def enforce_rate_limit!(endpoint_spec)
+      return if rate_limiter.allow?(endpoint_spec)
 
-      code = body['code'].to_i
-      return if code == 200 || (status && status >= 200 && status < 300 && code.positive?)
-
-      message = body['msg'] || 'Unknown error'
-      error = BinanceUSDM.create_error(
-        code: code,
-        message: message,
-        http_status: status,
-        headers: headers,
-        endpoint: endpoint
-      )
-
-      logger.error("[API ERROR] #{error.class}: #{message} (code: #{code})")
-      raise error
+      logger.warn("Rate limit exceeded for #{endpoint_spec.path}")
+      raise RateLimitError, 'Rate limit exceeded'
     end
 
     # Default logger
@@ -226,6 +188,23 @@ module BinanceUSDM
       Logger.new($stdout).tap do |log|
         log.level = ENV.fetch('BINANCE_LOG_LEVEL', 'WARN').to_sym
       end
+    end
+
+    def build_http(timeout)
+      Transport::HTTP.new(
+        base_url: @base_url,
+        api_key: @api_key,
+        secret_key: @secret_key,
+        timeout: timeout,
+        logger: @logger
+      )
+    end
+
+    def build_resources
+      @order = Resources::Order.new(self)
+      @account = Resources::Account.new(self)
+      @market = Resources::Market.new(self)
+      @algo_orders = Resources::AlgoOrder.new(self)
     end
   end
 end

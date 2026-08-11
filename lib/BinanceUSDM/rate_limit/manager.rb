@@ -84,7 +84,7 @@ module BinanceUSDM
           return if allow?(endpoint_spec)
 
           elapsed = Time.now - start_time
-          raise Errors::RateLimitError, "Rate limit wait exceeded #{max_wait}s" if elapsed > max_wait
+          raise RateLimitError, "Rate limit wait exceeded #{max_wait}s" if elapsed > max_wait
 
           sleep(0.1)
         end

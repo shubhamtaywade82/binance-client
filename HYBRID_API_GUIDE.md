@@ -251,11 +251,11 @@ rescue BinanceUSDM::ConfigurationError => e
   # Raised when no credentials are configured
   puts "Configure credentials first: #{e.message}"
   
-rescue BinanceUSDM::Errors::APIError => e
+rescue BinanceUSDM::ApiError => e
   # General API error
   puts "API error: #{e.message}"
   
-rescue BinanceUSDM::Errors::OrderError => e
+rescue BinanceUSDM::OrderError => e
   # Order-specific error
   puts "Order error: #{e.message}"
 end
