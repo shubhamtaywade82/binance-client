@@ -54,12 +54,21 @@ RSpec.describe Binance::Products::API do
     end
 
     it 'uses query encoding for user stream listen keys' do
-      stub_request(:post, 'https://fapi.binance.com/fapi/v1/listenKey').to_return(status: 200,
-                                                                                  body: { 'listenKey' => 'abc' }.to_json,
-                                                                                  headers: { 'Content-Type' => 'application/json' })
+      stub_request(:post, 'https://fapi.binance.com/fapi/v1/listenKey')
+        .to_return(status: 200, body: { 'listenKey' => 'abc' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
 
       futures = described_class.new(product: :um_futures, api_key: 'k', secret_key: 's')
       expect(futures.request(:post_fapi_v1_listenkey)['listenKey']).to eq('abc')
+    end
+
+    it 'routes to the testnet host when testnet: true' do
+      stub_request(:get, 'https://testnet.binance.vision/api/v3/time')
+        .to_return(status: 200, body: { 'serverTime' => 123 }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      testnet_api = described_class.new(product: :spot, testnet: true)
+      expect(testnet_api.request(:get_api_v3_time)['serverTime']).to eq(123)
     end
   end
 

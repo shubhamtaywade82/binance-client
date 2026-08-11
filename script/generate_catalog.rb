@@ -8,14 +8,14 @@
 require 'json'
 
 MANIFEST = {
-  'Spot REST API' => { product: :spot, host: 'https://api.binance.com', time_path: '/api/v3/time' },
-  'Futures (USDⓈ-M) REST API' => { product: :um_futures, host: 'https://fapi.binance.com', time_path: '/fapi/v1/time' },
-  'Futures (COIN-M) REST API' => { product: :cm_futures, host: 'https://dapi.binance.com', time_path: '/dapi/v1/time' },
-  'Options REST API' => { product: :options, host: 'https://eapi.binance.com', time_path: '/eapi/v1/time' },
-  'Portfolio Margin REST API' => { product: :portfolio_margin, host: 'https://papi.binance.com', time_path: nil },
+  'Spot REST API' => { product: :spot, host: 'https://api.binance.com', testnet_host: 'https://testnet.binance.vision', time_path: '/api/v3/time' },
+  'Futures (USDⓈ-M) REST API' => { product: :um_futures, host: 'https://fapi.binance.com', testnet_host: 'https://testnet.binancefuture.com', time_path: '/fapi/v1/time' },
+  'Futures (COIN-M) REST API' => { product: :cm_futures, host: 'https://dapi.binance.com', testnet_host: 'https://testnet.binancefuture.com', time_path: '/dapi/v1/time' },
+  'Options REST API' => { product: :options, host: 'https://eapi.binance.com', testnet_host: 'https://testnet.binanceoptions.com', time_path: '/eapi/v1/time' },
+  'Portfolio Margin REST API' => { product: :portfolio_margin, host: 'https://papi.binance.com', testnet_host: 'https://testnet.binancefuture.com', time_path: nil },
   'Portfolio Margin Pro REST API' => { product: :portfolio_margin_pro, host: 'https://api.binance.com', time_path: '/api/v3/time' },
   'Wallet REST API' => { product: :wallet, host: 'https://api.binance.com', time_path: '/api/v3/time' },
-  'Margin REST API' => { product: :margin, host: 'https://api.binance.com', time_path: '/api/v3/time' },
+  'Margin REST API' => { product: :margin, host: 'https://api.binance.com', testnet_host: 'https://testnet.binance.vision', time_path: '/api/v3/time' },
   'Sub Account REST API' => { product: :sub_account, host: 'https://api.binance.com', time_path: '/api/v3/time' },
   'Simple Earn REST API' => { product: :simple_earn, host: 'https://api.binance.com', time_path: '/api/v3/time' },
   'Staking REST API' => { product: :staking, host: 'https://api.binance.com', time_path: '/api/v3/time' },
@@ -136,8 +136,9 @@ lines << '      # Product metadata: hosts and time-sync path.'
 lines << '      PRODUCTS = {'
 MANIFEST.keys.sort.each do |family|
   meta = MANIFEST[family]
+  testnet = meta[:testnet_host] ? ", testnet_host: '#{meta[:testnet_host]}'" : ''
   lines << "        #{meta[:product]}: { family: #{family.inspect}, host: '#{meta[:host]}', " \
-           "time_path: #{meta[:time_path].inspect} },"
+           "time_path: #{meta[:time_path].inspect}#{testnet} },"
 end
 lines << '      }.freeze'
 lines << ''

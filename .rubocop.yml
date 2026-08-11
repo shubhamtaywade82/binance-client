@@ -12,9 +12,8 @@
 AllCops:
   NewCops: enable
   SuggestExtensions: false
-  # Unified-SDK core work-in-progress (not yet lint-clean, not loaded by the gem).
+  # Unified-SDK core work-in-progress (not yet lint-clean).
   Exclude:
-    - lib/binance/core/context.rb
     - lib/binance/core/rate_limit/**/*
     - lib/binance/core/transport/**/*
     - lib/binance/helpers/**/*
@@ -29,10 +28,10 @@ Metrics/BlockLength:
   Exclude:
     - spec/**/*
 
-# Pure endpoint metadata table (~760 lines of data, 5 lookup methods).
-Metrics/ModuleLength:
+# Generic product client with catalog-driven request dispatch.
+Metrics/ClassLength:
   Exclude:
-    - lib/binance/core/endpoint_registry.rb
+    - lib/binance/products/api.rb
 
 # Overridable callback stubs are single-line by design.
 Style/EmptyMethod:

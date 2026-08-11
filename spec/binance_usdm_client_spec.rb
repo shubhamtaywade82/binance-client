@@ -136,10 +136,10 @@ RSpec.describe Binance::Client do
       expect(unified_client.um_futures.client.api_key).to eq('api_key')
     end
 
-    it 'exposes generic product clients for all catalog products' do
+    it 'exposes a typed Spot client alongside generic clients for other catalog products' do
       unified_client = Binance.client(api_key: 'api_key', secret_key: 'secret_key')
-      expect(unified_client.spot).to be_a(Binance::Products::API)
-      expect(unified_client.spot.product).to eq(:spot)
+      expect(unified_client.spot).to be_a(Binance::Spot::Client)
+      expect(unified_client.spot.api.product).to eq(:spot)
       expect(unified_client.cm_futures).to be_a(Binance::Products::API)
       expect(unified_client.cm_futures.product).to eq(:cm_futures)
       expect(unified_client.wallet).to be_a(Binance::Products::API)

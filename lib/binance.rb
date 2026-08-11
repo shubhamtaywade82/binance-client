@@ -12,8 +12,6 @@ require_relative 'binance/errors'
 require_relative 'binance/constants'
 
 # Core modules
-require_relative 'binance/core/endpoint_registry'
-require_relative 'binance/core/base_api'
 require_relative 'binance/core/base_model'
 require_relative 'binance/core/catalog'
 
@@ -26,7 +24,6 @@ require_relative 'binance/core/rate_limit/manager'
 require_relative 'binance/core/transport/request'
 require_relative 'binance/core/transport/response'
 require_relative 'binance/core/transport/http'
-require_relative 'binance/core/context'
 
 # Generic product clients (all Binance REST families)
 require_relative 'binance/products/api'
@@ -139,6 +136,20 @@ module Binance
       end
     end
 
+    # Lazy initialization for the typed Spot client
+    # @return [Binance::Spot::Client]
+    def spot
+      @spot ||= begin
+        require_relative 'binance/spot/client'
+        Spot::Client.new(
+          api_key: @api_key,
+          secret_key: @secret_key,
+          testnet: @testnet,
+          logger: @logger
+        )
+      end
+    end
+
     # Generic access to any catalog product (spot, wallet, margin, ...)
     # @param name [Symbol] Product key (e.g. :spot, :wallet)
     # @return [Binance::Products::API]
@@ -155,9 +166,11 @@ module Binance
       )
     end
 
-    # All catalog products are exposed as convenience accessors.
+    # All catalog products without a typed client are exposed as generic
+    # convenience accessors (Binance::Products::API). Spot and UM Futures have
+    # dedicated typed clients above (#spot, #um_futures).
     %i[
-      spot cm_futures options portfolio_margin portfolio_margin_pro
+      cm_futures options portfolio_margin portfolio_margin_pro
       wallet margin sub_account simple_earn staking convert pay fiat c2c
       gift_card mining rebate algo crypto_loan vip_loan vip_service vip_caas
       institutional_loan discount_buy dual_investment exchange_link fund_account
@@ -170,18 +183,24 @@ module Binance
     # @return [Hash] Server times from each product
     def sync_time!
       results = {}
-      begin
-        results[:um_futures] = um_futures.sync_time!
-      rescue StandardError => e
-        @logger.warn("Failed to sync UM Futures time: #{e.message}")
-      end
+      results[:um_futures] = safe_sync_time(:um_futures) { um_futures.sync_time! }
+      results[:spot] = safe_sync_time(:spot) { spot.sync_time! } if @spot
       products.each do |name, api|
-        results[name] = api.sync_time!
-      rescue StandardError => e
-        @logger.warn("Failed to sync #{name} time: #{e.message}")
+        results[name] = safe_sync_time(name) { api.sync_time! }
       end
       results.compact
     end
+
+    private
+
+    def safe_sync_time(name)
+      yield
+    rescue StandardError => e
+      @logger.warn("Failed to sync #{name} time: #{e.message}")
+      nil
+    end
+
+    public
 
     # All lazily-initialized generic product clients
     # @return [Hash<Symbol, Binance::Products::API>]

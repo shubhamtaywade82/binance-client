@@ -87,13 +87,8 @@ module Binance
         endpoint = Core::Catalog.find(product, action)
         raise ArgumentError, "Unknown endpoint: #{product}.#{action}" unless endpoint
 
-        request_obj = Core::Transport::Request.new(
-          method: endpoint[:method],
-          path: endpoint[:path],
-          params: params,
-          security: endpoint[:security],
-          encoding: encoding || default_encoding(endpoint)
-        )
+        request_obj = build_request(endpoint[:method], endpoint[:path], params, endpoint[:security],
+                                    encoding || default_encoding(endpoint))
         sync_time_if_needed!(request_obj)
         execute_on_transport(endpoint.merge(host: resolved_host(endpoint[:host])), request_obj)
       end
@@ -105,13 +100,7 @@ module Binance
       # @param signed [Boolean] Whether the request requires a signature
       # @return [Hash, Array] Parsed JSON response
       def execute(method, path, params = {}, signed: true)
-        request_obj = Core::Transport::Request.new(
-          method: method,
-          path: path,
-          params: params,
-          security: signed ? :trade : :market,
-          encoding: default_encoding(method: method)
-        )
+        request_obj = build_request(method, path, params, signed ? :trade : :market, default_encoding(method: method))
         sync_time_if_needed!(request_obj)
         execute_on_transport({ host: resolved_host(metadata[:host]), path: path }, request_obj)
       end
@@ -175,6 +164,16 @@ module Binance
         sync_time!
       rescue StandardError => e
         logger.warn("Auto time sync failed for #{product}: #{e.message}")
+      end
+
+      def build_request(method, path, params, security, encoding)
+        Core::Transport::Request.new(
+          method: method,
+          path: path,
+          params: params,
+          security: security,
+          encoding: encoding
+        )
       end
 
       def default_encoding(endpoint = nil, method: nil)
