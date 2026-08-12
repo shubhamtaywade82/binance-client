@@ -62,6 +62,26 @@ module Binance
           @api.request(:get_api_v3_avgprice, symbol: symbol)
         end
 
+        # Get historical block trades (large off-book trades)
+        def historical_block_trades(symbol:, limit: 500)
+          @api.request(:get_api_v3_historicalblocktrades, symbol: symbol, limit: limit)
+        end
+
+        # Get order entry rules (min/max notional, filters) for a symbol
+        def execution_rules(symbol:)
+          @api.request(:get_api_v3_executionrules, symbol: symbol)
+        end
+
+        # Get the current reference price for a symbol
+        def reference_price(symbol:)
+          @api.request(:get_api_v3_referenceprice, symbol: symbol)
+        end
+
+        # Get the reference price calculation detail for a symbol
+        def reference_price_calculation(symbol:)
+          @api.request(:get_api_v3_referenceprice_calculation, symbol: symbol)
+        end
+
         def ticker_24h(symbol: nil, symbols: nil, type: nil)
           response = @api.request(:get_api_v3_ticker_24hr, ticker_params(symbol, symbols, type))
           wrap_ticker(response)

@@ -327,8 +327,7 @@ module Binance
         # Get all current open orders across all symbols
         # @return [Array<Models::Order>] All open orders
         def all_open_orders
-          response = get('/fapi/v1/allOpenOrders', params: {})
-          response.map { |order_data| Models::Order.new(order_data) }
+          open_orders
         end
 
         # Get all orders (including filled and canceled)

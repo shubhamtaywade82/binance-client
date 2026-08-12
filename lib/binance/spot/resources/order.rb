@@ -184,6 +184,21 @@ module Binance
           @api.request(:post_api_v3_orderlist_otoco, params)
         end
 
+        # One-Cancels-the-Other, deprecated in favor of #oco (orderList/oco)
+        def oco_deprecated(**params)
+          @api.request(:post_api_v3_order_oco, params)
+        end
+
+        # One-Pending-Order (single order placed once a preceding condition triggers)
+        def opo(**params)
+          @api.request(:post_api_v3_orderlist_opo, params)
+        end
+
+        # One-Pending-OCO (an OCO pair placed once a preceding condition triggers)
+        def opoco(**params)
+          @api.request(:post_api_v3_orderlist_opoco, params)
+        end
+
         def cancel_order_list(symbol:, order_list_id: nil, client_order_id: nil, recv_window: nil)
           unless order_list_id || client_order_id
             raise ArgumentError, 'Either order_list_id or client_order_id must be provided'
@@ -231,8 +246,19 @@ module Binance
 
         # Place a new order routed through Smart Order Routing (SOR)
         def sor_place(symbol:, side:, quantity:, **options)
+          Models::Order.new(@api.request(:post_api_v3_sor_order, sor_payload(symbol, side, quantity, options)))
+        end
+
+        # Test SOR order creation (signature checked but order not sent to matching engine)
+        def sor_test(symbol:, side:, quantity:, **options)
+          @api.request(:post_api_v3_sor_order_test, sor_payload(symbol, side, quantity, options))
+        end
+
+        private
+
+        def sor_payload(symbol, side, quantity, options)
           params = order_payload(symbol: symbol, side: side, type: options.delete(:type) || 'MARKET', **options)
-          Models::Order.new(@api.request(:post_api_v3_sor_order, params.merge(quantity: quantity)))
+          params.merge(quantity: quantity)
         end
       end
     end

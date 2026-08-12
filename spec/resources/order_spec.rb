@@ -30,6 +30,22 @@ RSpec.describe Binance::USDM::Resources::Order do
     end
   end
 
+  describe '#all_open_orders' do
+    it 'hits the openOrders endpoint with no symbol (not the DELETE-only allOpenOrders path)' do
+      stub_request(:get, %r{#{base_url}/fapi/v1/openOrders})
+        .with(query: hash_not_including('symbol'))
+        .to_return(
+          status: 200,
+          body: [{ 'orderId' => 777, 'symbol' => 'BTCUSDT', 'status' => 'NEW' }].to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      result = order_resource.all_open_orders
+      expect(result.first).to be_a(Binance::USDM::Models::Order)
+      expect(result.first.order_id).to eq(777)
+    end
+  end
+
   describe '#all_orders' do
     it 'returns all orders for a symbol' do
       stub_request(:get, %r{#{base_url}/fapi/v1/allOrders})

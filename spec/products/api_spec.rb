@@ -70,6 +70,15 @@ RSpec.describe Binance::Products::API do
       testnet_api = described_class.new(product: :spot, testnet: true)
       expect(testnet_api.request(:get_api_v3_time)['serverTime']).to eq(123)
     end
+
+    it 'falls back to production, with a warning, for products with no testnet host' do
+      stub_request(:get, 'https://api.binance.com/sapi/v1/system/status')
+        .to_return(status: 200, body: { 'status' => 0 }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      wallet_testnet = described_class.new(product: :wallet, testnet: true)
+      expect(wallet_testnet.logger).to receive(:warn).with(/no known testnet host/)
+      expect(wallet_testnet.request(:get_sapi_v1_system_status)['status']).to eq(0)
+    end
   end
 
   describe '#execute' do
