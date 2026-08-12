@@ -82,6 +82,67 @@ futures_order = client.um_futures.place_order(
 balances = client.wallet.coin_info
 ```
 
+## Generic Products API (Catalog-driven)
+
+Every Binance REST endpoint across all 36 products (888 endpoints) is reachable
+through `Binance::Products::API` via the generated endpoint catalog
+(`Binance::Core::Catalog`, generated from the official docs by
+`script/generate_catalog.rb`).
+
+```ruby
+require 'binance'
+
+client = Binance.client
+
+# Any catalog endpoint by action name (method + snake-cased path)
+client.spot.request(:get_api_v3_time)                     # => { "serverTime" => ... }
+client.spot.request(:get_api_v3_klines, symbol: "BTCUSDT", interval: "1h", limit: 100)
+client.wallet.request(:get_sapi_v1_system_status)
+
+# Signed endpoints automatically add timestamp + signature
+client.spot.request(:get_api_v3_account)
+
+# Every product key is exposed as an accessor on Binance::Client
+client.cm_futures.request(:get_dapi_v1_time)
+client.options.request(:get_eapi_v1_time)
+client.portfolio_margin.request(:get_papi_v1_ping)
+client.simple_earn.request(...)
+
+# Raw paths (for endpoints not in the catalog)
+client.product(:spot).get('/api/v3/ping')
+client.product(:spot).post('/api/v3/order', symbol: "BTCUSDT", side: "BUY", type: "MARKET", quantity: "0.001")
+
+# Inspect the catalog
+Binance::Core::Catalog.for_product(:spot).map { |e| e[:action] }   # all spot actions
+Binance::Core::Catalog.find(:spot, :get_api_v3_klines)              # endpoint metadata
+```
+
+### Testnet
+
+Products with a public testnet (`spot`, `um_futures`, `cm_futures`, `options`,
+`portfolio_margin`, `margin`) automatically route to their testnet host when
+`testnet: true`. Products without a sandbox fall back to production with a
+one-time warning rather than failing.
+
+```ruby
+client = Binance.client(testnet: true)
+client.spot.request(:get_api_v3_time)  # => hits https://testnet.binance.vision
+```
+
+### Action naming convention
+
+Actions are `#{http_method}_#{snake_cased_path}`:
+
+| Endpoint | Action |
+| --- | --- |
+| `GET /api/v3/klines` | `:get_api_v3_klines` |
+| `POST /api/v3/order` | `:post_api_v3_order` |
+| `DELETE /fapi/v1/order` | `:delete_fapi_v1_order` |
+
+Security levels (`NONE`, `MARKET_DATA`, `TRADE`, `USER_DATA`, `USER_STREAM`,
+`MARGIN`) are resolved automatically from the catalog; signed requests are
+authenticated via the shared `Binance::Core` clock with automatic time sync.
+
 ## Security Levels
 
 The SDK supports three security levels automatically:

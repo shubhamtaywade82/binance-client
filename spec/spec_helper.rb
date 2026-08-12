@@ -2,6 +2,7 @@
 
 require 'binance_usdm'
 require 'binance'
+require 'binance/spot/client'
 require 'webmock/rspec'
 require 'vcr'
 require_relative 'helpers/shared_contexts'

@@ -19,7 +19,7 @@ RSpec.describe Binance::Spot::Client do
 
   it 'routes through the testnet host' do
     stub_request(:get, "#{base_url}/api/v3/ping").to_return(status: 200, body: '{}',
-                                                             headers: { 'Content-Type' => 'application/json' })
+                                                            headers: { 'Content-Type' => 'application/json' })
 
     expect(client.market.ping).to eq({})
   end

@@ -39,7 +39,7 @@ RSpec.describe Binance::Spot::Resources::Order do
     end
 
     it 'cancels an order' do
-      stub_request(:delete, "#{base_url}/api/v3/order")
+      stub_request(:delete, %r{#{base_url}/api/v3/order(\?|$)})
         .to_return(status: 200, body: { 'orderId' => 1, 'symbol' => 'BTCUSDT', 'status' => 'CANCELED' }.to_json,
                    headers: { 'Content-Type' => 'application/json' })
 
@@ -62,15 +62,15 @@ RSpec.describe Binance::Spot::Resources::Order do
         .to_return(status: 200, body: { 'orderId' => 2 }.to_json,
                    headers: { 'Content-Type' => 'application/json' })
 
-      result = order.cancel_replace(symbol: 'BTCUSDT', side: :buy, type: :market, cancel_replace_mode: 'STOP_ON_FAILURE',
-                                    cancel_order_id: 1, quote_order_qty: '10')
+      result = order.cancel_replace(symbol: 'BTCUSDT', side: :buy, type: :market,
+                                    cancel_replace_mode: 'STOP_ON_FAILURE', cancel_order_id: 1, quote_order_qty: '10')
       expect(result['orderId']).to eq(2)
     end
   end
 
   describe '#open_orders' do
     it 'returns typed orders' do
-      stub_request(:get, "#{base_url}/api/v3/openOrders")
+      stub_request(:get, %r{#{base_url}/api/v3/openOrders})
         .to_return(status: 200, body: [{ 'orderId' => 1, 'symbol' => 'BTCUSDT', 'status' => 'NEW' }].to_json,
                    headers: { 'Content-Type' => 'application/json' })
 
